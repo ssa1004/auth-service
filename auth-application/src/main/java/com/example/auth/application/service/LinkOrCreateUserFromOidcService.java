@@ -85,7 +85,7 @@ public class LinkOrCreateUserFromOidcService implements LinkOrCreateUserFromOidc
         }
 
         // 3. 자동 가입 — 비밀번호는 랜덤 32 byte (OIDC 외 로그인 차단). 사용자가 비밀번호 로그인을
-        // 원하면 비밀번호 재설정 흐름으로 자기 비밀번호를 새로 박제.
+        // 원하면 비밀번호 재설정 흐름으로 자신의 비밀번호를 새로 설정합니다.
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("OIDC 사용자 자동 가입에는 이메일이 필요합니다");
         }

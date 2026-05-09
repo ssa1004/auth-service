@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * LocalFileKeyMaterialSource (ADR-0014) — load/init, rotation 시 previous 슬롯 박제,
- * 부팅 재시작 시 같은 키 복원 여부를 검증.
+ * LocalFileKeyMaterialSource (ADR-0014) — load/init, rotation 시 previous 슬롯에 직전
+ * 키 보관, 부팅 재시작 시 같은 키 복원 여부를 검증.
  */
 class LocalFileKeyMaterialSourceTest {
 
@@ -41,7 +41,7 @@ class LocalFileKeyMaterialSourceTest {
     }
 
     @Test
-    void rotate_후_previous_슬롯에_직전_키_박제(@TempDir Path tmp) throws Exception {
+    void rotate_후_previous_슬롯에_직전_키_보관(@TempDir Path tmp) throws Exception {
         Path file = tmp.resolve("local-jwk.json");
         LocalFileKeyMaterialSource src = new LocalFileKeyMaterialSource(file);
 
@@ -52,7 +52,7 @@ class LocalFileKeyMaterialSourceTest {
         KeyMaterial newCurrent = anotherKey();
         src.rotate(newCurrent);
 
-        // current 가 newCurrent 로 갱신, previous 가 original 로 박제.
+        // current 가 newCurrent 로 갱신, previous 가 original 로 보관.
         KeyMaterial reloaded = src.loadOrInitCurrent();
         assertThat(reloaded.kid()).isEqualTo(newCurrent.kid());
         assertThat(src.loadPrevious()).isPresent();

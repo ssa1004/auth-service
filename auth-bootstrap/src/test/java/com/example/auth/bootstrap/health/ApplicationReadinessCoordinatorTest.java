@@ -110,8 +110,8 @@ class ApplicationReadinessCoordinatorTest {
 
     @Test
     void liveness_는_external_의존_DOWN_과_무관하게_CORRECT_유지() throws Exception {
-        // liveness=BROKEN 으로 가면 K8s 가 컨테이너를 재시작 — DB 일시 장애로 살아있는
-        // pod 죽이는 cascade 사고를 막기 위해 liveness 는 외부 의존 무시.
+        // liveness=BROKEN 으로 가면 K8s 가 컨테이너를 재시작합니다. DB 일시 장애로 살아있는
+        // pod 까지 죽여 장애가 더 커지는 것을 막기 위해 liveness 는 외부 의존을 보지 않습니다.
         healthRegistry.put("db", () -> Health.down().build());
         healthRegistry.put("redis", () -> Health.down().build());
 

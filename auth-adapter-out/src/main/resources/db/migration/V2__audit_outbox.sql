@@ -1,7 +1,7 @@
 -- V2 — audit 이벤트의 SIEM sink (Kafka) outbox.
--- ADR-0012 — append-only audit 는 DB 에 박제되고, 같은 트랜잭션에서 outbox row 가
--- 만들어진다. 별도 worker 가 outbox 를 폴링하여 Kafka 로 publish + 성공 시 published_at
--- 를 박제 (at-least-once — consumer 측 dedup).
+-- ADR-0012 — append-only audit 는 DB 에 INSERT 되고, 같은 트랜잭션에서 outbox row 가
+-- 만들어집니다. 별도 worker 가 outbox 를 폴링하여 Kafka 로 publish 하고, 성공 시
+-- published_at 를 기록합니다 (at-least-once — consumer 측 dedup).
 
 CREATE TABLE audit_event_outbox (
     id              UUID        PRIMARY KEY,

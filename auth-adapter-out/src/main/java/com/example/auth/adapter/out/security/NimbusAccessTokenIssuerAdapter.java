@@ -22,8 +22,8 @@ import org.springframework.stereotype.Component;
 /**
  * Nimbus JOSE 로 access JWT 서명. 서명 키는 {@link JwkSourceProvider} 의 current 를 사용.
  *
- * <p>알고리즘: RS256 (ADR-0002 — EdDSA 도입은 후속). header 에 {@code kid} 를 박제해야
- * verifier 가 회전 중인 키 중 어느 것으로 검증할지 결정 가능합니다.
+ * <p>알고리즘: RS256 (ADR-0002 — EdDSA 도입은 후속). header 에 {@code kid} 를 포함시켜야
+ * verifier 가 회전 중인 키 중 어느 것으로 검증할지 결정할 수 있습니다.
  */
 @Component
 @RequiredArgsConstructor

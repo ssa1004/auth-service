@@ -20,10 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Dev / local 용 키 소스 (ADR-0014). 디스크 파일 (`local-jwk.json`) 에 RSA 2048 키를
- * 박제. 파일은 .gitignore 대상.
+ * 영속화합니다. 파일은 .gitignore 대상.
  *
- * <p>운영 환경에서 *절대* 사용 금지 — 디스크 휘발 + pod 간 키 불일치 + 시크릿 노출 위험.
- * 운영은 {@code KmsKeyMaterialSource} 로 교체.
+ * <p>운영 환경에서 절대 사용 금지 — 디스크 휘발 + pod 간 키 불일치 + 시크릿 노출 위험.
+ * 운영은 {@code KmsKeyMaterialSource} 로 교체합니다.
  */
 @Slf4j
 public class LocalFileKeyMaterialSource implements KeyMaterialSource {
@@ -44,7 +44,7 @@ public class LocalFileKeyMaterialSource implements KeyMaterialSource {
                 return existing.current.toMaterial();
             }
         }
-        // 신규 키 생성 + 박제.
+        // 신규 키 생성 + 저장.
         KeyMaterial fresh = generateKey();
         FileLayout layout = new FileLayout();
         layout.current = SerializedKey.from(fresh);

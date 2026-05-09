@@ -38,7 +38,7 @@ class AuditOutboxPublisherWorkerTest {
     }
 
     @Test
-    void 폴링_시_미발행_row_를_publisher_로_발행하고_published_at_박제() {
+    void 폴링_시_미발행_row_를_publisher_로_발행하고_published_at_기록() {
         AuditEventOutboxEntity row = AuditEventOutboxEntity.create(
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 "auth.audit",

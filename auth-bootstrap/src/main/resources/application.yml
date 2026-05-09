@@ -80,8 +80,8 @@ management:
           # readiness=DOWN 이면 K8s 가 트래픽 차단. Postgres / Redis 의존을 포함.
           include: readinessState,db,redis
         liveness:
-          # liveness 는 *프로세스가 살아있는가* 만 본다 — DB down 으로 살아있는 pod 를
-          # 죽이면 cascade 사고를 키울 수 있어, 외부 의존은 일부러 빼는 것이 권장 패턴.
+          # liveness 는 프로세스가 살아있는지만 봅니다. DB down 으로 살아있는 pod 까지
+          # 죽이면 장애가 더 커질 수 있어 외부 의존은 일부러 빼는 것이 권장 패턴.
           include: livenessState
   health:
     livenessstate:
@@ -124,7 +124,7 @@ auth:
     # local 백엔드의 파일 경로. 운영에서는 디스크 휘발 + pod 간 키 불일치 위험으로 절대 사용 금지.
     local-path: ${AUTH_JWK_LOCAL_PATH:./local-jwk.json}
   oidc:
-    # Google OIDC 매핑 시 사용자 도메인의 tenantSlug. multi-tenant 본격화 후 redirect URI 박제.
+    # Google OIDC 매핑 시 사용자 도메인의 tenantSlug. multi-tenant 본격화 후 redirect URI 에 포함.
     default-tenant-slug: ${AUTH_OIDC_DEFAULT_TENANT:default}
 
 logging:
