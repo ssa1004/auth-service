@@ -1,0 +1,12 @@
+.git
+.gradle
+.idea
+**/build
+**/.gradle
+*.log
+docs
+infrastructure/k8s
+.github
+.claude
+.codex
+.Codex
