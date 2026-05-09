@@ -7,6 +7,7 @@ import com.example.auth.application.port.in.RefreshTokenUseCase;
 import com.example.auth.application.port.out.RefreshTokenRepository;
 import com.example.auth.application.port.out.TenantRepository;
 import com.example.auth.application.port.out.UserRepository;
+import com.example.auth.application.security.AuthProperties;
 import com.example.auth.application.security.AuthTokens;
 import com.example.auth.domain.audit.AuditEventType;
 import com.example.auth.domain.tenant.Tenant;
@@ -15,6 +16,7 @@ import com.example.auth.domain.token.TokenHasher;
 import com.example.auth.domain.user.User;
 import java.time.Clock;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +43,7 @@ public class RefreshTokenService implements RefreshTokenUseCase {
     private final TenantRepository tenantRepository;
     private final SessionIssuer sessionIssuer;
     private final AuditLoginAttemptsUseCase auditUseCase;
+    private final AuthProperties authProperties;
     private final Clock clock;
 
     /**
@@ -56,7 +59,19 @@ public class RefreshTokenService implements RefreshTokenUseCase {
                 .orElseThrow(InvalidCredentialsException::new);
 
         if (existing.isReuseSignal()) {
-            // 이미 정상 회전된 token 이 다시 들어옴 — 탈취 의심.
+            // 이미 정상 회전된 token 이 다시 들어옴 — *대부분* 탈취 신호지만, 모바일 client 의
+            // 네트워크 jitter / 백그라운드 retry 로 *같은 refresh 를 30초 안에 한 번 더* 보내는
+            // 정당한 케이스가 있다. grace 윈도우 안 + 같은 IP 면 revoke 까진 안 가고 401 만.
+            boolean sameNetwork = Objects.equals(existing.ipAddress(), cmd.ipAddress());
+            if (existing.isWithinReuseGrace(
+                    clock.instant(), authProperties.refreshReuseGracePeriod(), sameNetwork)) {
+                log.info("refresh grace retry user={} sinceRotation={}s — 401 만 반환, revoke 안 함",
+                        existing.userId().asString(),
+                        java.time.Duration.between(existing.lastUsedAt(), clock.instant()).toSeconds());
+                // grace — invalid credential 응답만. 정상 client 는 자기가 받은 새 refresh 로 재시도하면 됨.
+                throw new InvalidCredentialsException();
+            }
+            // 진짜 reuse — 일괄 revoke (Auth0 패턴).
             int revoked = refreshTokenRepository.revokeAllForUser(existing.tenantId(), existing.userId());
             auditUseCase.record(
                     existing.tenantId(), existing.userId(),

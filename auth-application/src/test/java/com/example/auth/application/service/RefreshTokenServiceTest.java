@@ -59,7 +59,7 @@ class RefreshTokenServiceTest {
         loginService = new LoginService(
                 users, tenants, hasher, allowLimiter, challenges, sessionIssuer, auditService, props);
         refreshService = new RefreshTokenService(
-                refresh, users, tenants, sessionIssuer, auditService, clock);
+                refresh, users, tenants, sessionIssuer, auditService, props, clock);
 
         tenant = tenants.save(Tenant.create("acme", "ACME", clock.instant()));
         User alice = User.register(tenant.id(), "alice@example.com",
@@ -90,8 +90,9 @@ class RefreshTokenServiceTest {
                 "acme", "alice@example.com", "supersecret123", "1.2.3.4", "ua", "iphone"));
 
         // 이제 *이미 회전된* initial refresh 를 다시 사용하면 reuse signal.
+        // grace 윈도우 우회 — IP 가 다르면 즉시 reuse 로 간주.
         assertThatThrownBy(() -> refreshService.refresh(new RefreshTokenUseCase.Command(
-                initialTokens.refreshToken(), "1.2.3.4", "ua")))
+                initialTokens.refreshToken(), "9.9.9.9", "ua")))
                 .isInstanceOf(RefreshReuseDetectedException.class);
 
         // 사용자의 모든 refresh 가 REVOKED_REUSE_DETECTED
@@ -116,7 +117,7 @@ class RefreshTokenServiceTest {
         // 시계를 미래로 보내는 별도 service 인스턴스
         Clock future = Clock.fixed(clock.instant().plus(Duration.ofDays(31)), ZoneOffset.UTC);
         RefreshTokenService futureService = new RefreshTokenService(
-                refresh, users, tenants, sessionIssuer, auditService, future);
+                refresh, users, tenants, sessionIssuer, auditService, props, future);
 
         assertThatThrownBy(() -> futureService.refresh(new RefreshTokenUseCase.Command(
                 initialTokens.refreshToken(), "1.2.3.4", "ua")))
@@ -131,5 +132,46 @@ class RefreshTokenServiceTest {
         assertThatThrownBy(() -> refreshService.refresh(new RefreshTokenUseCase.Command(
                 initialTokens.refreshToken(), "1.2.3.4", "ua")))
                 .isInstanceOf(InvalidCredentialsException.class);
+    }
+
+    /**
+     * grace 윈도우 안의 retry — 같은 IP, 5초 안 → 401 만 (revoke 안 함).
+     * 모바일 client 의 jitter 에 의한 정당한 재요청 시나리오 보호.
+     */
+    @Test
+    void 회전_직후_같은_IP_에서_retry_는_revoke_없이_401() {
+        // 1. 정상 회전
+        refreshService.refresh(new RefreshTokenUseCase.Command(
+                initialTokens.refreshToken(), "1.2.3.4", "ua"));
+
+        // 2. 같은 IP / UA 로 즉시 재시도 (mobile retry 시나리오) — grace 안
+        assertThatThrownBy(() -> refreshService.refresh(new RefreshTokenUseCase.Command(
+                initialTokens.refreshToken(), "1.2.3.4", "ua")))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        // 3. 사용자의 다른 active 세션은 그대로 유지 — 일괄 revoke 미발동
+        long stillActive = refresh.all().stream()
+                .filter(t -> t.status() == RefreshTokenStatus.ACTIVE)
+                .count();
+        assertThat(stillActive).isPositive();
+        // REUSE_DETECTED 은 audit 에도 안 박힘
+        assertThat(auditLog.events()).extracting("type")
+                .doesNotContain(AuditEventType.REFRESH_REUSE_DETECTED);
+    }
+
+    /** grace 윈도우 밖 retry — 시계 진행 후엔 reuse detection 정상 발동. */
+    @Test
+    void 회전_후_grace_윈도우_지나면_같은_IP_라도_reuse_detection() {
+        refreshService.refresh(new RefreshTokenUseCase.Command(
+                initialTokens.refreshToken(), "1.2.3.4", "ua"));
+
+        // grace 5초 + 1초 = 6초 진행한 별도 인스턴스
+        Clock laterClock = Clock.fixed(clock.instant().plus(Duration.ofSeconds(6)), ZoneOffset.UTC);
+        RefreshTokenService laterService = new RefreshTokenService(
+                refresh, users, tenants, sessionIssuer, auditService, props, laterClock);
+
+        assertThatThrownBy(() -> laterService.refresh(new RefreshTokenUseCase.Command(
+                initialTokens.refreshToken(), "1.2.3.4", "ua")))
+                .isInstanceOf(RefreshReuseDetectedException.class);
     }
 }

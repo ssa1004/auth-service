@@ -72,10 +72,12 @@ class RegisterAndLoginE2eTest extends AbstractE2eTest {
         String newRefresh = json(rotated.body(), "refreshToken");
         assertThat(newRefresh).isNotEqualTo(refresh);
 
-        // 4) 회전된 refresh 를 다시 사용 → reuse detection
-        HttpResponse<String> reuse = post("/api/v1/auth/refresh", """
+        // 4) 회전된 refresh 를 다시 사용 → reuse detection.
+        //    grace 윈도우 (5초, ADR-0015) 우회를 위해 다른 IP 로 가정하는 X-Forwarded-For 사용.
+        HttpResponse<String> reuse = postWithIp("/api/v1/auth/refresh",
+                """
                 {"refreshToken":"%s"}
-                """.formatted(refresh));
+                """.formatted(refresh), "9.9.9.9");
         assertThat(reuse.statusCode()).isEqualTo(401);
         assertThat(reuse.body()).contains("refresh_reuse_detected");
 
@@ -90,6 +92,17 @@ class RegisterAndLoginE2eTest extends AbstractE2eTest {
         return http.send(HttpRequest.newBuilder(URI.create(baseUrl() + path))
                         .timeout(Duration.ofSeconds(60))
                         .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    /** X-Forwarded-For 로 다른 client IP 를 가정 — grace 윈도우 회피 (ADR-0015) 검증용. */
+    private HttpResponse<String> postWithIp(String path, String body, String forwardedIp) throws Exception {
+        return http.send(HttpRequest.newBuilder(URI.create(baseUrl() + path))
+                        .timeout(Duration.ofSeconds(60))
+                        .header("Content-Type", "application/json")
+                        .header("X-Forwarded-For", forwardedIp)
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .build(),
                 HttpResponse.BodyHandlers.ofString());
