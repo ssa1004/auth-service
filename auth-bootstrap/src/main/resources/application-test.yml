@@ -24,3 +24,7 @@ auth:
   mfa:
     # 테스트 전용 시드. 실제 비밀 아님.
     aes-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  jwk:
+    # 테스트 — local-jwk.json 을 working dir 에 만들지 않도록 tmp 로 격리.
+    # build/test 는 매 빌드마다 비워지므로 부팅마다 새 키.
+    local-path: build/test/local-jwk.json
