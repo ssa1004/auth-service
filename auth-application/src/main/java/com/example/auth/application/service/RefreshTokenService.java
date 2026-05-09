@@ -43,8 +43,13 @@ public class RefreshTokenService implements RefreshTokenUseCase {
     private final AuditLoginAttemptsUseCase auditUseCase;
     private final Clock clock;
 
+    /**
+     * reuse detection 시 throw 하기 *전에* 일괄 revoke 까지 커밋되어야 합니다.
+     * RuntimeException 은 기본적으로 트랜잭션 rollback 을 트리거하므로, 본 예외만은 명시적
+     * 으로 commit 하도록 noRollbackFor 지정. (audit 자체는 REQUIRES_NEW 로 별도 보장)
+     */
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = RefreshReuseDetectedException.class)
     public AuthTokens refresh(Command cmd) {
         String hash = TokenHasher.sha256(cmd.refreshTokenPlain());
         RefreshToken existing = refreshTokenRepository.findByTokenHash(hash)

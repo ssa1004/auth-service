@@ -21,4 +21,6 @@ dependencies {
     testImplementation("org.testcontainers:postgresql")
     testImplementation("com.redis:testcontainers-redis:2.2.2")
     testImplementation("org.awaitility:awaitility")
+    // 직접 TOTP 코드 생성용 (verify 시나리오 테스트)
+    testImplementation("dev.samstevens.totp:totp")
 }

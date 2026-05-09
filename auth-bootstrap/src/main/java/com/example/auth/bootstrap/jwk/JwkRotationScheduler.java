@@ -1,6 +1,7 @@
 package com.example.auth.bootstrap.jwk;
 
 import com.example.auth.adapter.out.security.JwkSourceProvider;
+import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class JwkRotationScheduler {
         try {
             RSAKey newKey = new RSAKeyGenerator(2048)
                     .keyID(UUID.randomUUID().toString())
+                    .keyUse(KeyUse.SIGNATURE)
                     .generate();
             provider.rotate(newKey);
             log.info("JWK rotated newKid={} jwkSetSize={}", newKey.getKeyID(),

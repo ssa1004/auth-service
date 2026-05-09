@@ -27,7 +27,7 @@ public interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenEnt
     List<RefreshTokenEntity> findByTenantIdAndUserIdAndStatus(
             UUID tenantId, UUID userId, RefreshTokenStatus status);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             update RefreshTokenEntity t
                set t.status = :revoked, t.lastUsedAt = :now
