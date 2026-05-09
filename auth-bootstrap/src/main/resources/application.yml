@@ -5,6 +5,32 @@ spring:
     url: jdbc:postgresql://localhost:5432/auth
     username: auth
     password: auth
+    hikari:
+      # ADR-0009 — 풀 사이즈 산정.
+      # auth-service 는 인증 (CPU + 짧은 DB I/O) 위주 워크로드. 한 인스턴스 4 vCPU 가정.
+      # Hikari 권장 공식: pool = (core_count * 2) + effective_spindle_count (1).
+      # → 4*2+1 = 9. 단, JWK 회전 / audit append / refresh rotation 동시 실행 +
+      # connection 회수 지연 여유로 18 잡음 (= 권장 하한의 2배).
+      # PostgreSQL `max_connections=100` 인스턴스 가정 — 인스턴스 5대 * 18 = 90 < 100,
+      # 운영자가 더 띄우면 PgBouncer 연결 풀러 도입을 검토.
+      maximum-pool-size: 18
+      # idle 4 — 야간 / 트래픽 저점에도 cold start 방지용. timeout 30분 안에 새 연결 만들기보다
+      # 살려두는 게 latency 일관성에 유리.
+      minimum-idle: 4
+      # connection-timeout 3s — 풀이 마르면 빠르게 fail-fast. 30s 면 클라이언트 timeout 보다
+      # 훨씬 늦어 cascade 장애 유발.
+      connection-timeout: 3000
+      # max-lifetime 29분 — RDS / GCP CloudSQL 의 idle TCP timeout (30분) 보다 1분 짧게.
+      # 그래야 Hikari 가 먼저 끊고 새 연결을 만들어 "stale connection" 예외 회피.
+      max-lifetime: 1740000
+      # idle-timeout — minimum-idle 보다 많은 연결을 회수하기까지 시간. max-lifetime 보다 짧게.
+      idle-timeout: 600000
+      # leak-detection-threshold 30s — 30초 이상 연결 잡고 있으면 stack trace 로 경고.
+      # 운영에서 누가 connection.close() 빠뜨리는지 즉시 확인 가능. prod=on, test=off.
+      leak-detection-threshold: 30000
+      # 풀 이름 — Prometheus / Grafana 에서 식별 용이.
+      pool-name: AuthHikariPool
+      # validation 은 JDBC 4 isValid() 위임 — `connection-test-query` 명시 안 함이 권장.
   jpa:
     hibernate:
       ddl-auto: validate
