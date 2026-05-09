@@ -12,6 +12,13 @@ public interface RefreshTokenRepository {
 
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
+    /**
+     * introspection 처럼 잠금이 필요 없는 단순 조회용. {@link #findByTokenHash(String)}
+     * 가 회전 / reuse detection 경로에서 비관적 잠금을 거는 것과 달리, 본 메서드는 read-only
+     * 트랜잭션에서 사용해야 합니다.
+     */
+    Optional<RefreshToken> findByTokenHashReadOnly(String tokenHash);
+
     List<RefreshToken> findActiveByUser(TenantId tenantId, UserId userId);
 
     /**

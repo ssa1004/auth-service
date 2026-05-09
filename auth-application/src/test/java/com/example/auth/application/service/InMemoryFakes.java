@@ -152,6 +152,11 @@ public final class InMemoryFakes {
         }
 
         @Override
+        public Optional<RefreshToken> findByTokenHashReadOnly(String tokenHash) {
+            return findByTokenHash(tokenHash);
+        }
+
+        @Override
         public List<RefreshToken> findActiveByUser(TenantId tenantId, UserId userId) {
             return store.values().stream()
                     .filter(t -> t.tenantId().equals(tenantId) && t.userId().equals(userId))
@@ -167,6 +172,7 @@ public final class InMemoryFakes {
                 if (!t.tenantId().equals(tenantId) || !t.userId().equals(userId)) continue;
                 if (t.status() == com.example.auth.domain.token.RefreshTokenStatus.REVOKED_REUSE_DETECTED) continue;
                 if (t.status() == com.example.auth.domain.token.RefreshTokenStatus.REVOKED_BY_USER) continue;
+                if (t.status() == com.example.auth.domain.token.RefreshTokenStatus.REVOKED_BY_ADMIN) continue;
                 store.put(t.id(), t.markRevokedReuseDetected(now));
                 n++;
             }

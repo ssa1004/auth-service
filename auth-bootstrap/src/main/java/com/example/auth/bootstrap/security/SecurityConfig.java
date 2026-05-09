@@ -40,6 +40,24 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
+    /**
+     * RFC 7662 introspect / RFC 7009 revoke 는 본 IdP 의 자체 컨트롤러가 처리하므로 (ADR-0017,
+     * ADR-0018), Spring Authorization Server 가 같은 path 에 등록한 기본 endpoint 보다
+     * 먼저 매칭되어야 합니다. order 0 으로 분리하고, client_secret_basic 으로 호출 client 만
+     * 받습니다 — 외부에 공개 시 token oracle 이 되어 위험.
+     */
+    @Bean
+    @Order(0)
+    public SecurityFilterChain tokenAdminEndpointsSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/oauth2/introspect", "/oauth2/revoke")
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(reg -> reg.anyRequest().authenticated())
+                .httpBasic(Customizer.withDefaults());
+        return http.build();
+    }
+
     @Bean
     @Order(1)
     public SecurityFilterChain authServerSecurityFilterChain(HttpSecurity http) throws Exception {
