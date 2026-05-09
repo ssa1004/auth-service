@@ -30,6 +30,12 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
     }
 
     @Override
+    public Optional<RefreshToken> findByTokenHashReadOnly(String tokenHash) {
+        // introspection 등 단순 조회 — 잠금 없이.
+        return jpa.findByTokenHash(tokenHash).map(RefreshTokenEntity::toDomain);
+    }
+
+    @Override
     public List<RefreshToken> findActiveByUser(TenantId tenantId, UserId userId) {
         return jpa.findByTenantIdAndUserIdAndStatus(
                         tenantId.value(), userId.value(), RefreshTokenStatus.ACTIVE)
