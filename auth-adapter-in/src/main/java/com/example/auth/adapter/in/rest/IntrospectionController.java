@@ -2,6 +2,14 @@ package com.example.auth.adapter.in.rest;
 
 import com.example.auth.application.port.in.IntrospectTokenUseCase;
 import com.example.auth.application.port.in.IntrospectTokenUseCase.Result;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -28,19 +36,57 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "oauth2")
+@SecurityRequirement(name = "clientBasic")
 public class IntrospectionController {
 
     private final IntrospectTokenUseCase useCase;
 
+    @Operation(
+            summary = "RFC 7662 Token Introspection",
+            description = """
+                    Resource Server 가 access / refresh 토큰의 유효성을 본 IdP 에 직접 묻는
+                    표준 endpoint. 응답 본문은 RFC 7662 §2.2 의 표준 필드 — active, scope,
+                    client_id, sub, exp, iat, token_type 등. token 형식이 잘못됐거나 알 수
+                    없는 token 이면 정보 누설 없이 {"active":false} 만 반환.
+
+                    호출자는 client_credentials grant 로 인증된 client 만 허용 — 외부에 임의
+                    토큰 introspect 를 노출하면 token oracle 이 됩니다 (공격자가 훔친 토큰의
+                    유효성을 자유롭게 검증).
+                    """,
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+                            schema = @Schema(implementation = IntrospectFormSchema.class))))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "RFC 7662 §2.2 응답 — active=true 시 표준 + 커스텀 필드, false 시 active 만"),
+            @ApiResponse(responseCode = "401", description = "client_credentials Basic 인증 실패")
+    })
     @PostMapping(value = "/oauth2/introspect", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<Map<String, Object>> introspect(
+            @Parameter(description = "검증할 access JWT 또는 refresh token (평문)", required = true)
             @RequestParam("token") String token,
+            @Parameter(description = "RFC 7662 §2.1 의 hint — access_token | refresh_token")
             @RequestParam(value = "token_type_hint", required = false) String tokenTypeHint,
             Authentication caller) {
         String callerClient = caller != null ? caller.getName() : null;
         Result result = useCase.introspect(new IntrospectTokenUseCase.Command(
                 token, tokenTypeHint, callerClient));
         return ResponseEntity.ok(toRfc7662(result));
+    }
+
+    /**
+     * Springdoc 가 form-urlencoded body 의 schema 를 추출할 때 사용하는 스키마 표현 record.
+     * 본 record 는 직접 인스턴스화되지 않습니다 — schema 정의용.
+     */
+    @SuppressWarnings("unused")
+    @Schema(name = "IntrospectForm", description = "RFC 7662 introspection request body")
+    public record IntrospectFormSchema(
+            @Schema(description = "검증할 token", requiredMode = Schema.RequiredMode.REQUIRED)
+            String token,
+            @Schema(description = "access_token | refresh_token", example = "access_token")
+            String token_type_hint) {
     }
 
     /**

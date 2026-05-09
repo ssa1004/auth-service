@@ -15,6 +15,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
     testImplementation("org.springframework.boot:spring-boot-starter-data-redis")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // OpenAPI spec JSON 파싱 — spring-boot-starter-test 가 transitive 로 가져오지만 직접 import 명시.
+    testImplementation("com.fasterxml.jackson.core:jackson-databind")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter")
