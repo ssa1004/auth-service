@@ -102,6 +102,14 @@ public final class RefreshToken {
                 deviceLabel, ipAddress, issuedAt, expiresAt, now);
     }
 
+    /** 운영자가 RFC 7009 revoke 로 강제 종료. */
+    public RefreshToken markRevokedByAdmin(Instant now) {
+        return new RefreshToken(
+                id, tenantId, userId, tokenHash, parentId,
+                RefreshTokenStatus.REVOKED_BY_ADMIN,
+                deviceLabel, ipAddress, issuedAt, expiresAt, now);
+    }
+
     public RefreshToken markRevokedReuseDetected(Instant now) {
         return new RefreshToken(
                 id, tenantId, userId, tokenHash, parentId,
