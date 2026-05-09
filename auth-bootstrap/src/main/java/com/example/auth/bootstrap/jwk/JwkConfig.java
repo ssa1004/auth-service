@@ -1,8 +1,8 @@
 package com.example.auth.bootstrap.jwk;
 
 import com.example.auth.adapter.out.security.JwkSourceProvider;
-import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jose.jwk.source.JWKSource;
@@ -28,6 +28,7 @@ public class JwkConfig {
     public JwkSourceProvider jwkSourceProvider() throws Exception {
         RSAKey initial = new RSAKeyGenerator(2048)
                 .keyID(UUID.randomUUID().toString())
+                .keyUse(KeyUse.SIGNATURE)
                 .generate();
         return new JwkSourceProvider(initial);
     }

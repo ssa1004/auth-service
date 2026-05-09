@@ -11,6 +11,7 @@ import jakarta.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component;
  * key 예: {@code login:<tenant>:<ip>:<email>}.
  */
 @Component
+@Profile("!e2e")
 public class RedisRateLimiterAdapter implements RateLimiter {
 
     private final RedisClient redisClient;
