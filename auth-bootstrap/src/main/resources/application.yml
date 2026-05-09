@@ -1,6 +1,10 @@
 spring:
   application:
     name: auth-service
+  lifecycle:
+    # 기다리는 최대 시간. K8s terminationGracePeriodSeconds (30s) 보다 짧게 — 그래야
+    # K8s 가 SIGKILL 보내기 전에 Spring 이 알아서 정리 끝냄.
+    timeout-per-shutdown-phase: 25s
   datasource:
     url: jdbc:postgresql://localhost:5432/auth
     username: auth
@@ -57,6 +61,9 @@ spring:
 server:
   port: 8080
   forward-headers-strategy: framework
+  # ADR-0011 — graceful shutdown.
+  # SIGTERM 수신 시 새 요청은 받지 않고 in-flight 요청은 끝날 때까지 기다림.
+  shutdown: graceful
 
 management:
   endpoints:
@@ -67,6 +74,20 @@ management:
     health:
       probes:
         enabled: true
+      # liveness / readiness state indicator 활성 (ADR-0010).
+      group:
+        readiness:
+          # readiness=DOWN 이면 K8s 가 트래픽 차단. Postgres / Redis 의존을 포함.
+          include: readinessState,db,redis
+        liveness:
+          # liveness 는 *프로세스가 살아있는가* 만 본다 — DB down 으로 살아있는 pod 를
+          # 죽이면 cascade 사고를 키울 수 있어, 외부 의존은 일부러 빼는 것이 권장 패턴.
+          include: livenessState
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
   metrics:
     tags:
       application: ${spring.application.name}
