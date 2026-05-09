@@ -49,3 +49,7 @@ auth:
     from: no-reply@e2e.example.com
   mfa:
     aes-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  jwk:
+    # e2e 테스트가 회전 시나리오를 돌릴 때 working dir 의 ./local-jwk.json 을 더럽히지
+    # 않도록 build/ 안에 격리. gradle clean 시 함께 정리됨.
+    local-path: build/e2e/local-jwk.json
