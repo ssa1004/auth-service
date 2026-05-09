@@ -1,5 +1,6 @@
 package com.example.auth.application.security;
 
+import java.net.URI;
 import java.time.Duration;
 
 /**
@@ -16,7 +17,8 @@ public record AuthProperties(
         int loginRateBurst,
         Duration loginRateWindow,
         String jwtIssuer,
-        String mfaIssuer) {
+        String mfaIssuer,
+        Opa opa) {
 
     public static AuthProperties defaults() {
         return new AuthProperties(
@@ -27,6 +29,20 @@ public record AuthProperties(
                 10,
                 Duration.ofMinutes(1),
                 "https://auth.example.com",
-                "auth-service");
+                "auth-service",
+                Opa.embedded());
+    }
+
+    /**
+     * OPA wiring (ADR-0016).
+     *
+     * @param mode        embedded → in-process Java 평가기, sidecar → REST OPA daemon.
+     * @param baseUrl     sidecar 모드에서 사용. 보통 localhost:8181.
+     * @param callTimeout REST 호출 timeout. OPA 정상 응답이 ms 대라 100ms 이내 권장.
+     */
+    public record Opa(String mode, URI baseUrl, Duration callTimeout) {
+        public static Opa embedded() {
+            return new Opa("embedded", null, Duration.ofMillis(100));
+        }
     }
 }

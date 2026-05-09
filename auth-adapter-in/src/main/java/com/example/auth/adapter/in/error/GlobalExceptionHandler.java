@@ -1,6 +1,7 @@
 package com.example.auth.adapter.in.error;
 
 import com.example.auth.application.exception.AuthenticationException;
+import com.example.auth.application.exception.PolicyDeniedException;
 import com.example.auth.application.exception.RateLimitedException;
 import com.example.auth.application.exception.RefreshReuseDetectedException;
 import com.example.auth.application.exception.TenantNotFoundException;
@@ -28,6 +29,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> auth(AuthenticationException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ApiError("invalid_credentials", ex.getMessage()));
+    }
+
+    @ExceptionHandler(PolicyDeniedException.class)
+    public ResponseEntity<ApiError> policy(PolicyDeniedException ex) {
+        // RBAC 통과 후 ABAC 정책에서 막힘 — 인증은 됐고 권한이 부족한 상태이므로 403.
+        // reasons 는 message 안에 join 되어 들어가 있음 (PII 미포함이 정책 작성 규칙).
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiError("policy_denied", ex.getMessage()));
     }
 
     @ExceptionHandler(RateLimitedException.class)

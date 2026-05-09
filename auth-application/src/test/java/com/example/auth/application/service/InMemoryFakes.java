@@ -1,5 +1,8 @@
 package com.example.auth.application.service;
 
+import com.example.auth.application.authz.PolicyDecisionPort;
+import com.example.auth.application.authz.PolicyDecisionRequest;
+import com.example.auth.application.authz.PolicyDecisionResult;
 import com.example.auth.application.port.out.AccessTokenIssuer;
 import com.example.auth.application.port.out.AuditLogRepository;
 import com.example.auth.application.port.out.ExternalIdentityRepository;
@@ -333,6 +336,34 @@ public final class InMemoryFakes {
         @Override
         public boolean verify(String secret, String code) {
             return acceptCode.equals(code);
+        }
+    }
+
+    /**
+     * 항상 allow 를 반환하는 정책 평가기. 개별 service 테스트에서 RBAC 흐름만 검증할 때
+     * 사용. ABAC 동작 자체는 별도 테스트 (PolicyDecisionServiceTest) 가 검증.
+     */
+    public static class AlwaysAllowPolicyDecisionPort implements PolicyDecisionPort {
+        public final List<String> calls = new ArrayList<>();
+
+        @Override
+        public PolicyDecisionResult evaluate(String policyPath, PolicyDecisionRequest request) {
+            calls.add(policyPath + ":" + request.action());
+            return PolicyDecisionResult.allowed();
+        }
+    }
+
+    /** 항상 deny — 정책 거부 동작 검증용. */
+    public static class AlwaysDenyPolicyDecisionPort implements PolicyDecisionPort {
+        public final String reason;
+
+        public AlwaysDenyPolicyDecisionPort(String reason) {
+            this.reason = reason;
+        }
+
+        @Override
+        public PolicyDecisionResult evaluate(String policyPath, PolicyDecisionRequest request) {
+            return PolicyDecisionResult.denied(reason);
         }
     }
 

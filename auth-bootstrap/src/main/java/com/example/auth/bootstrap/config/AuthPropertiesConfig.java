@@ -1,6 +1,7 @@
 package com.example.auth.bootstrap.config;
 
 import com.example.auth.application.security.AuthProperties;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -24,6 +25,7 @@ public class AuthPropertiesConfig {
 
     @Bean
     public AuthProperties authProperties(AuthPropertiesBinding b) {
+        AuthPropertiesBinding.OpaBinding opa = b.opa != null ? b.opa : new AuthPropertiesBinding.OpaBinding();
         return new AuthProperties(
                 b.accessTokenTtl != null ? b.accessTokenTtl : Duration.ofMinutes(15),
                 b.refreshTokenTtl != null ? b.refreshTokenTtl : Duration.ofDays(30),
@@ -32,7 +34,11 @@ public class AuthPropertiesConfig {
                 b.loginRateBurst > 0 ? b.loginRateBurst : 10,
                 b.loginRateWindow != null ? b.loginRateWindow : Duration.ofMinutes(1),
                 b.jwtIssuer != null ? b.jwtIssuer : "https://auth.example.com",
-                b.mfaIssuer != null ? b.mfaIssuer : "auth-service");
+                b.mfaIssuer != null ? b.mfaIssuer : "auth-service",
+                new AuthProperties.Opa(
+                        opa.mode != null ? opa.mode : "embedded",
+                        opa.baseUrl,
+                        opa.callTimeout != null ? opa.callTimeout : Duration.ofMillis(100)));
     }
 
     @Bean
@@ -50,6 +56,7 @@ public class AuthPropertiesConfig {
         public Duration loginRateWindow;
         public String jwtIssuer;
         public String mfaIssuer;
+        public OpaBinding opa;
 
         public Duration getAccessTokenTtl() { return accessTokenTtl; }
         public void setAccessTokenTtl(Duration v) { this.accessTokenTtl = v; }
@@ -67,5 +74,20 @@ public class AuthPropertiesConfig {
         public void setJwtIssuer(String v) { this.jwtIssuer = v; }
         public String getMfaIssuer() { return mfaIssuer; }
         public void setMfaIssuer(String v) { this.mfaIssuer = v; }
+        public OpaBinding getOpa() { return opa; }
+        public void setOpa(OpaBinding v) { this.opa = v; }
+
+        public static class OpaBinding {
+            public String mode;
+            public URI baseUrl;
+            public Duration callTimeout;
+
+            public String getMode() { return mode; }
+            public void setMode(String v) { this.mode = v; }
+            public URI getBaseUrl() { return baseUrl; }
+            public void setBaseUrl(URI v) { this.baseUrl = v; }
+            public Duration getCallTimeout() { return callTimeout; }
+            public void setCallTimeout(Duration v) { this.callTimeout = v; }
+        }
     }
 }
