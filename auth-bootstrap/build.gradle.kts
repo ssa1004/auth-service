@@ -18,6 +18,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.security:spring-security-oauth2-authorization-server")
+    // OAuth2 client — Google OIDC consumer (ADR-0013).
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
 
     // Actuator / Prometheus
     implementation("org.springframework.boot:spring-boot-starter-actuator")
