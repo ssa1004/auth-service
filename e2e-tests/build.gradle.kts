@@ -18,6 +18,9 @@ dependencies {
     // OpenAPI spec JSON 파싱 — spring-boot-starter-test 가 transitive 로 가져오지만 직접 import 명시.
     testImplementation("com.fasterxml.jackson.core:jackson-databind")
     testImplementation("org.springframework.security:spring-security-test")
+    // JWT 디코드 — JwkRotationE2eTest 에서 회전 전후 access JWT 의 kid 비교.
+    testImplementation("org.springframework.security:spring-security-oauth2-jose")
+    testImplementation("org.springframework.security:spring-security-oauth2-resource-server")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
