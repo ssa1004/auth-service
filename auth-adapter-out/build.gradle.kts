@@ -18,8 +18,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     // Rate limiting (token bucket — IP+username key)
-    implementation("io.github.bucket4j:bucket4j_jdk17-core")
-    implementation("io.github.bucket4j:bucket4j-redis")
+    implementation("com.bucket4j:bucket4j_jdk17-core")
+    implementation("com.bucket4j:bucket4j_jdk17-lettuce")
+
+    // JWT 서명 — Spring Authorization Server 가 동일 라이브러리를 transitive 로 가져오지만
+    // adapter-out 에서 직접 import 하므로 명시적 선언이 필요합니다.
+    implementation("com.nimbusds:nimbus-jose-jwt:9.40")
 
     // 2FA TOTP — RFC 6238. Google Authenticator 호환. dev.samstevens.totp 가 단순/검증된 라이브러리.
     implementation("dev.samstevens.totp:totp")
