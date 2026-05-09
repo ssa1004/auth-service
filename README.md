@@ -7,7 +7,9 @@ multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
 - Spring Boot 3.4 / Java 21 / Spring Authorization Server 1.4
 - Postgres + Flyway + JPA / Redis (refresh reuse 감지, rate limit, MFA challenge)
 - 헥사고날 (ports & adapters) + 모듈 6개
-- ADR 15개로 핵심 결정 정리 ([docs/adr](docs/adr))
+- ADR 18개로 핵심 결정 정리 ([docs/adr](docs/adr)) — RBAC + ABAC (OPA), JWK rotation, Refresh
+  reuse detection (+ grace), 2FA TOTP, Audit append-only, RFC 7662 Introspection,
+  RFC 7009 Revocation 등
 
 ---
 
@@ -16,24 +18,27 @@ multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
 | 모듈 | 역할 |
 | --- | --- |
 | `auth-domain` | User / Tenant / Role / Permission / RefreshToken / MfaSecret / AuditEvent. Spring 의존성 0 |
-| `auth-application` | 8개 use case + in/out port. `@Service` / `@Transactional` 까지만 |
+| `auth-application` | 11개 use case + in/out port. `@Service` / `@Transactional` 까지만 |
 | `auth-adapter-out` | JPA / Redis / TOTP / BCrypt / AES-GCM / Nimbus JOSE 구현체 |
 | `auth-adapter-in` | REST controller + Spring Authorization Server endpoint |
 | `auth-bootstrap` | Spring Boot main + JWK rotation + `SecurityFilterChain` 조립 + Flyway |
 | `e2e-tests` | Postgres + Redis Testcontainer 통합 시나리오 |
 
-## 8개 use case
+## 11개 use case
 
 | use case | 핵심 |
 | --- | --- |
 | `RegisterUserUseCase` | email + password (BCrypt cost=12) + tenant. 메일 verification mock |
 | `LoginUseCase` | bad credentials / locked / not-found 모두 동일한 응답으로 정보 누설을 차단. MFA 활성 사용자는 401 + `mfaToken` |
 | `VerifyMfaUseCase` | TOTP 검증. challenge 토큰은 1회 consume (replay 차단). tenant context 보존 |
-| `RefreshTokenUseCase` | rotation + reuse detection. 회전된 token 이 다시 들어오면 모든 세션을 강제 revoke |
+| `RefreshTokenUseCase` | rotation + reuse detection. 회전된 token 이 다시 들어오면 모든 세션을 강제 revoke (grace window 5초 — 같은 IP 의 mobile retry 보호) |
 | `RevokeSessionUseCase` | 사용자가 자신의 세션 목록에서 특정 세션을 즉시 revoke |
 | `ListMySessionsUseCase` | 활성 refresh 목록 (디바이스 / IP / 마지막 사용 시각) |
 | `AssignRoleUseCase` | 운영자가 사용자에 role 부여. cross-tenant role 부여 거부 |
 | `AuditLoginAttemptsUseCase` | append-only audit. `REQUIRES_NEW` 로 호출 트랜잭션 rollback 무관 |
+| `LinkOrCreateUserFromOidcUseCase` | Google OIDC consumer — 외부 IdP 사용자와 매핑 / 자동 가입 |
+| `IntrospectTokenUseCase` | RFC 7662 — access JWT / refresh 의 active 여부 + claim 응답. 외부 issuer / 가짜 / revoke 모두 `{active:false}` |
+| `RevokeTokenByAdminUseCase` | RFC 7009 — admin 의 강제 revoke. access JWT 는 Redis 블록리스트 (잔여 TTL), refresh 는 `REVOKED_BY_ADMIN` 상태 |
 
 ## 핵심 패턴
 
