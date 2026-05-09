@@ -16,5 +16,9 @@ public enum AuditEventType {
     SESSION_REVOKED_BY_USER,
     SESSION_REVOKED_BY_REUSE,
     ROLE_ASSIGNED,
-    ROLE_REVOKED
+    ROLE_REVOKED,
+    /** ABAC 정책이 행위를 허용한 결정 — Decision log (ADR-0016). */
+    POLICY_DECISION_ALLOW,
+    /** ABAC 정책이 행위를 거부한 결정 — Decision log (ADR-0016). */
+    POLICY_DECISION_DENY
 }
