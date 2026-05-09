@@ -2,6 +2,7 @@ package com.example.auth.application.service;
 
 import com.example.auth.application.port.out.AccessTokenIssuer;
 import com.example.auth.application.port.out.AuditLogRepository;
+import com.example.auth.application.port.out.ExternalIdentityRepository;
 import com.example.auth.application.port.out.MfaChallengeStore;
 import com.example.auth.application.port.out.MfaSecretCipher;
 import com.example.auth.application.port.out.MfaSecretRepository;
@@ -18,6 +19,8 @@ import com.example.auth.application.security.AccessTokenClaims;
 import com.example.auth.domain.audit.AuditEvent;
 import com.example.auth.domain.common.TenantId;
 import com.example.auth.domain.common.UserId;
+import com.example.auth.domain.identity.ExternalIdentity;
+import com.example.auth.domain.identity.ExternalProvider;
 import com.example.auth.domain.mfa.MfaSecret;
 import com.example.auth.domain.role.Role;
 import com.example.auth.domain.tenant.Tenant;
@@ -169,6 +172,26 @@ public final class InMemoryFakes {
 
         public int size() { return store.size(); }
         public java.util.Collection<RefreshToken> all() { return Collections.unmodifiableCollection(store.values()); }
+    }
+
+    public static class FakeExternalIdentityRepository implements ExternalIdentityRepository {
+        private final Map<UUID, ExternalIdentity> store = new ConcurrentHashMap<>();
+
+        @Override
+        public Optional<ExternalIdentity> findByProviderSubject(
+                ExternalProvider provider, String providerUserId) {
+            return store.values().stream()
+                    .filter(i -> i.provider() == provider && i.providerUserId().equals(providerUserId))
+                    .findFirst();
+        }
+
+        @Override
+        public ExternalIdentity save(ExternalIdentity identity) {
+            store.put(identity.id(), identity);
+            return identity;
+        }
+
+        public int size() { return store.size(); }
     }
 
     public static class FakeMfaSecretRepository implements MfaSecretRepository {
