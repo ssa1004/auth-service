@@ -31,6 +31,10 @@ spec:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
+      # ADR-0011 — graceful shutdown.
+      # SIGTERM → 25s 안에 in-flight 요청 끝내고 종료. 그 이상 걸리면 K8s 가 SIGKILL.
+      # preStop 5s + Spring graceful 25s + 여유 = 30s.
+      terminationGracePeriodSeconds: 30
       containers:
         - name: auth
           image: ghcr.io/ssa1004/auth-service:latest
@@ -50,10 +54,14 @@ spec:
             limits:
               cpu: "1000m"
               memory: "1024Mi"
+          # ADR-0010 — startup / readiness / liveness 3종 분리.
+          # startupProbe 가 통과하기 전까지 readiness / liveness 는 잠긴다 — 부팅 느린
+          # 인스턴스가 liveness fail 로 죽는 사고 방지.
           startupProbe:
             httpGet:
               path: /actuator/health/readiness
               port: http
+            # 5s * 30 = 150s 까지 부팅 허용 (Spring Boot + Flyway + JWK 초기 키).
             failureThreshold: 30
             periodSeconds: 5
           readinessProbe:
@@ -61,11 +69,19 @@ spec:
               path: /actuator/health/readiness
               port: http
             periodSeconds: 10
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             periodSeconds: 20
+            failureThreshold: 3
+          # preStop — Service endpoint 가 빠지기 전 도달한 in-flight 요청에 5s 의 여유.
+          # K8s 의 endpoint 제거 전파 vs SIGTERM 이 동시에 일어나면 race 가 있어 5s 유격.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
