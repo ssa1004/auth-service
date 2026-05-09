@@ -34,8 +34,12 @@ dependencies {
     // 메일 (verification 토큰 발송) — Mailhog SMTP 로 mock.
     implementation("org.springframework.boot:spring-boot-starter-mail")
 
-    // JSON (audit log payload)
+    // JSON (audit log payload + OPA decision request/response)
     implementation("com.fasterxml.jackson.core:jackson-databind")
+
+    // OPA REST 호출 — Spring 6 RestClient (Java HttpClient blocking) 사용.
+    // spring-web 은 spring-boot-starter-data-jpa transitives 에 포함되지 않으므로 명시.
+    implementation("org.springframework:spring-web")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
