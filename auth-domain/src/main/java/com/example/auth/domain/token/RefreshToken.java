@@ -126,6 +126,29 @@ public final class RefreshToken {
         return status == RefreshTokenStatus.REVOKED_ROTATED;
     }
 
+    /**
+     * 회전 직후 짧은 시간 안의 *정당한* 모바일 retry 인지 판단.
+     *
+     * <p><b>왜 필요</b>: 모바일 client 의 네트워크 jitter / 백그라운드 retry 로 *같은 refresh*
+     * 가 이미 회전된 직후 한 번 더 들어올 수 있다. 이걸 무조건 reuse 로 간주하면 정상
+     * 사용자가 자기 모든 세션을 잃는 사고. 30초 같은 짧은 grace window 안 retry 는 *조용한
+     * 401* 로 처리하고 사용자가 새 refresh 로 재시도하게 둠.</p>
+     *
+     * <p>30초 이후 또는 IP 가 다른 retry 는 진짜 탈취 의심으로 간주 → 일괄 revoke (Auth0 패턴).</p>
+     *
+     * @param now             현재 시각
+     * @param graceWindow     grace 윈도우 (예: 30s)
+     * @param sameNetwork     호출자 측에서 판단한 같은 IP / userAgent 여부
+     * @return true = grace 에 해당 (revoke 안 해도 됨), false = 진짜 reuse
+     */
+    public boolean isWithinReuseGrace(Instant now, java.time.Duration graceWindow, boolean sameNetwork) {
+        if (status != RefreshTokenStatus.REVOKED_ROTATED) return false;
+        if (lastUsedAt == null) return false;
+        if (!sameNetwork) return false;
+        java.time.Duration sinceRotation = java.time.Duration.between(lastUsedAt, now);
+        return !sinceRotation.isNegative() && sinceRotation.compareTo(graceWindow) <= 0;
+    }
+
     public UUID id() { return id; }
     public TenantId tenantId() { return tenantId; }
     public UserId userId() { return userId; }
