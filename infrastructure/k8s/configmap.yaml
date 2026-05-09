@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  namespace: auth
+data:
+  AUTH_JWT_ISSUER: "https://auth.example.com"
+  AUTH_ACCESS_TOKEN_TTL: "PT15M"
+  AUTH_REFRESH_TOKEN_TTL: "P30D"
+  AUTH_BCRYPT_COST: "12"
+  AUTH_LOGIN_RATE_BURST: "10"
+  AUTH_LOGIN_RATE_WINDOW: "PT1M"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://auth-postgres:5432/auth"
+  SPRING_DATA_REDIS_URL: "redis://auth-redis:6379"
+  SPRING_MAIL_HOST: "auth-mailhog"
+  SPRING_MAIL_PORT: "1025"
