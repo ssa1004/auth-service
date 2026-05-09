@@ -10,6 +10,13 @@ spring:
     username: sa
     password:
     driver-class-name: org.h2.Driver
+    hikari:
+      # 테스트는 leak detection 끔 — junit 의 @Transactional rollback 이 connection 을
+      # 길게 쥐는 패턴이 있어 noise 만 발생.
+      leak-detection-threshold: 0
+      maximum-pool-size: 4
+      minimum-idle: 1
+      connection-timeout: 5000
   mail:
     host: localhost
     port: 25
