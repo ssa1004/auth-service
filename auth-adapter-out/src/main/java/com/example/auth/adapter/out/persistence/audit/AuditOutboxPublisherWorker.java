@@ -13,13 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * outbox row 를 폴링해서 {@link SiemEventPublisher} 로 발행하는 worker (ADR-0012).
  *
- * <p>at-least-once — publish 직후 클라이언트 / 네트워크 장애로 published_at 박제 실패 시
- * 다음 사이클에 같은 row 가 재발행될 수 있다. consumer 측에서 eventId (`payload.eventId`)
- * 기반 dedup 필요.
+ * <p>at-least-once — publish 직후 클라이언트 / 네트워크 장애로 published_at 기록에
+ * 실패하면 다음 사이클에 같은 row 가 재발행될 수 있습니다. consumer 측에서 eventId
+ * (`payload.eventId`) 기반 dedup 이 필요합니다.
  *
- * <p>한 사이클당 BATCH_SIZE (50) 만 처리 — DB 부하와 SIEM 토폴로지 부담의 균형.
- * 실패 누적 MAX_ATTEMPTS (5) 이상은 일단 폴링에서 빠지고 dead-letter 로 분리할 후속 작업
- * 대상 (운영 알람 / 수동 재처리).
+ * <p>한 사이클당 BATCH_SIZE (50) 만 처리합니다. DB 부하와 SIEM 토폴로지 부담의 균형.
+ * 실패 누적 MAX_ATTEMPTS (5) 이상은 일단 폴링에서 빠지고 dead-letter 로 분리하는 것이
+ * 후속 작업 (운영 알람 / 수동 재처리).
  */
 @Component
 @RequiredArgsConstructor

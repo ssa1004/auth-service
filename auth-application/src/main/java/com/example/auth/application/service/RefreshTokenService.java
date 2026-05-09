@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Refresh token rotation + reuse detection (Auth0 패턴, ADR-0004).
+ * Refresh token rotation + reuse detection (ADR-0004).
  *
  * <ol>
  *   <li>요청된 평문 token 을 hash → DB lookup</li>
@@ -59,19 +59,19 @@ public class RefreshTokenService implements RefreshTokenUseCase {
                 .orElseThrow(InvalidCredentialsException::new);
 
         if (existing.isReuseSignal()) {
-            // 이미 정상 회전된 token 이 다시 들어옴 — *대부분* 탈취 신호지만, 모바일 client 의
-            // 네트워크 jitter / 백그라운드 retry 로 *같은 refresh 를 30초 안에 한 번 더* 보내는
-            // 정당한 케이스가 있다. grace 윈도우 안 + 같은 IP 면 revoke 까진 안 가고 401 만.
+            // 이미 정상 회전된 token 이 다시 들어왔습니다. 대부분 탈취 신호지만, 모바일 client 의
+            // 네트워크 jitter / 백그라운드 retry 로 같은 refresh 를 회전 직후 한 번 더 보내는
+            // 정당한 케이스가 있습니다. grace 윈도우 안 + 같은 IP 면 revoke 까지 가지 않고 401 만.
             boolean sameNetwork = Objects.equals(existing.ipAddress(), cmd.ipAddress());
             if (existing.isWithinReuseGrace(
                     clock.instant(), authProperties.refreshReuseGracePeriod(), sameNetwork)) {
-                log.info("refresh grace retry user={} sinceRotation={}s — 401 만 반환, revoke 안 함",
+                log.info("refresh grace retry user={} sinceRotation={}s — 401 만 반환, revoke 하지 않음",
                         existing.userId().asString(),
                         java.time.Duration.between(existing.lastUsedAt(), clock.instant()).toSeconds());
-                // grace — invalid credential 응답만. 정상 client 는 자기가 받은 새 refresh 로 재시도하면 됨.
+                // grace 처리 — invalid credential 응답만. 정상 client 는 자기가 받은 새 refresh 로 재시도하면 됨.
                 throw new InvalidCredentialsException();
             }
-            // 진짜 reuse — 일괄 revoke (Auth0 패턴).
+            // 진짜 reuse — 일괄 revoke (ADR-0004).
             int revoked = refreshTokenRepository.revokeAllForUser(existing.tenantId(), existing.userId());
             auditUseCase.record(
                     existing.tenantId(), existing.userId(),

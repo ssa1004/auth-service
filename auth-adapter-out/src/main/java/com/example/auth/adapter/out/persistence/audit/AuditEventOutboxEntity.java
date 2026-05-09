@@ -88,7 +88,7 @@ public class AuditEventOutboxEntity {
         return lastError;
     }
 
-    /** 발행 성공 시점 박제. */
+    /** 발행 성공 시점 기록. */
     public void markPublished(Instant now) {
         this.publishedAt = now;
         this.lastError = null;
