@@ -126,6 +126,14 @@ auth:
   oidc:
     # Google OIDC 매핑 시 사용자 도메인의 tenantSlug. multi-tenant 본격화 후 redirect URI 에 포함.
     default-tenant-slug: ${AUTH_OIDC_DEFAULT_TENANT:default}
+  opa:
+    # 'embedded' — in-process 평가기 (default). 외부 의존 없음, 정책은 코드와 함께 배포.
+    # 'sidecar'  — 같은 pod 안 OPA daemon 에 REST 호출 (운영 권장). 정책 bundle 을 git/S3
+    #              에서 polling 으로 hot reload — 코드 재배포 없이 정책 변경 가능.
+    mode: ${AUTH_OPA_MODE:embedded}
+    base-url: ${AUTH_OPA_BASE_URL:http://localhost:8181}
+    # OPA 정상 응답이 ms 대 — 100ms 가 넘으면 정책 엔진 문제 신호 (fail-fast).
+    call-timeout: ${AUTH_OPA_CALL_TIMEOUT:PT0.1S}
 
 logging:
   level:

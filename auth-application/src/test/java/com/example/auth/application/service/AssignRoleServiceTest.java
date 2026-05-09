@@ -3,7 +3,9 @@ package com.example.auth.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.auth.application.authz.PolicyDecisionService;
 import com.example.auth.application.exception.InvalidCredentialsException;
+import com.example.auth.application.exception.PolicyDeniedException;
 import com.example.auth.application.port.in.AssignRoleUseCase;
 import com.example.auth.domain.audit.AuditEventType;
 import com.example.auth.domain.common.UserId;
@@ -26,7 +28,9 @@ class AssignRoleServiceTest {
     private InMemoryFakes.FakeUserRepository users;
     private InMemoryFakes.FakeRoleRepository roles;
     private InMemoryFakes.CapturingAuditLog auditLog;
+    private InMemoryFakes.AlwaysAllowPolicyDecisionPort policyPort;
     private AuditLoginAttemptsService auditService;
+    private PolicyDecisionService policyDecisionService;
     private AssignRoleService service;
     private Tenant acme;
     private Tenant globex;
@@ -40,7 +44,9 @@ class AssignRoleServiceTest {
         roles = new InMemoryFakes.FakeRoleRepository();
         auditLog = new InMemoryFakes.CapturingAuditLog();
         auditService = new AuditLoginAttemptsService(auditLog, clock);
-        service = new AssignRoleService(users, roles, auditService);
+        policyPort = new InMemoryFakes.AlwaysAllowPolicyDecisionPort();
+        policyDecisionService = new PolicyDecisionService(policyPort, auditService);
+        service = new AssignRoleService(users, roles, auditService, policyDecisionService);
         acme = new Tenant(com.example.auth.domain.common.TenantId.newId(), "acme", "ACME",
                 com.example.auth.domain.tenant.TenantStatus.ACTIVE, clock.instant());
         globex = new Tenant(com.example.auth.domain.common.TenantId.newId(), "globex", "Globex",
@@ -81,5 +87,32 @@ class AssignRoleServiceTest {
         assertThatThrownBy(() -> service.assign(new AssignRoleUseCase.Command(
                 acme.id(), aliceId, UUID.randomUUID(), actorId, "1.2.3.4")))
                 .isInstanceOf(InvalidCredentialsException.class);
+    }
+
+    @Test
+    void 정책이_거부하면_PolicyDeniedException_으로_막힘() {
+        AssignRoleService denyingService = new AssignRoleService(
+                users, roles, auditService,
+                new PolicyDecisionService(
+                        new InMemoryFakes.AlwaysDenyPolicyDecisionPort("admin_role_requires_senior_admin"),
+                        auditService));
+
+        assertThatThrownBy(() -> denyingService.assign(new AssignRoleUseCase.Command(
+                acme.id(), aliceId, billingOperator.id(), actorId, "1.2.3.4")))
+                .isInstanceOf(PolicyDeniedException.class);
+
+        // role 부여까지 가지 않았는지 확인.
+        assertThat(roles.findByUser(acme.id(), aliceId)).isEmpty();
+    }
+
+    @Test
+    void 정책_평가도_audit_으로_적재() {
+        service.assign(new AssignRoleUseCase.Command(
+                acme.id(), aliceId, billingOperator.id(), actorId, "1.2.3.4"));
+
+        // 정책 결정과 ROLE_ASSIGNED 둘 다 audit 에 남아있어야 함.
+        assertThat(auditLog.events()).extracting("type")
+                .contains(AuditEventType.POLICY_DECISION_ALLOW, AuditEventType.ROLE_ASSIGNED);
+        assertThat(policyPort.calls).contains("auth/role/assign:role.assign");
     }
 }

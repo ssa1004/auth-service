@@ -3,7 +3,9 @@ package com.example.auth.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.auth.application.authz.PolicyDecisionService;
 import com.example.auth.application.exception.InvalidCredentialsException;
+import com.example.auth.application.exception.PolicyDeniedException;
 import com.example.auth.application.port.in.LoginUseCase;
 import com.example.auth.application.port.in.RevokeSessionUseCase;
 import com.example.auth.application.security.AuthProperties;
@@ -34,7 +36,9 @@ class RevokeAndListSessionsServiceTest {
     private InMemoryFakes.StubAccessTokenIssuer accessIssuer;
     private InMemoryFakes.CountingRefreshTokenGenerator refreshGen;
     private InMemoryFakes.CapturingAuditLog auditLog;
+    private InMemoryFakes.AlwaysAllowPolicyDecisionPort policyPort;
     private AuditLoginAttemptsService auditService;
+    private PolicyDecisionService policyDecisionService;
     private SessionIssuer sessionIssuer;
     private LoginService loginService;
     private RevokeSessionService revokeService;
@@ -55,10 +59,13 @@ class RevokeAndListSessionsServiceTest {
         refreshGen = new InMemoryFakes.CountingRefreshTokenGenerator();
         auditLog = new InMemoryFakes.CapturingAuditLog();
         auditService = new AuditLoginAttemptsService(auditLog, clock);
+        policyPort = new InMemoryFakes.AlwaysAllowPolicyDecisionPort();
+        policyDecisionService = new PolicyDecisionService(policyPort, auditService);
         sessionIssuer = new SessionIssuer(accessIssuer, refreshGen, refresh, roles, props, clock);
         loginService = new LoginService(
                 users, tenants, hasher, allowLimiter, challenges, sessionIssuer, auditService, props);
-        revokeService = new RevokeSessionService(refresh, auditService, clock);
+        revokeService = new RevokeSessionService(
+                refresh, roles, auditService, policyDecisionService, clock);
         listService = new ListMySessionsService(refresh);
 
         tenant = tenants.save(Tenant.create("acme", "ACME", clock.instant()));
@@ -115,5 +122,23 @@ class RevokeAndListSessionsServiceTest {
         assertThatThrownBy(() -> revokeService.revoke(new RevokeSessionUseCase.Command(
                 tenant.id(), aliceId, UUID.randomUUID(), "1.2.3.4")))
                 .isInstanceOf(InvalidCredentialsException.class);
+    }
+
+    @Test
+    void 정책이_거부하면_세션이_revoke_되지_않고_PolicyDenied() {
+        RevokeSessionService denyingService = new RevokeSessionService(
+                refresh, roles, auditService,
+                new PolicyDecisionService(
+                        new InMemoryFakes.AlwaysDenyPolicyDecisionPort("not_resource_owner"),
+                        auditService),
+                clock);
+        var alicesSession = listService.list(tenant.id(), aliceId).get(0);
+
+        assertThatThrownBy(() -> denyingService.revoke(new RevokeSessionUseCase.Command(
+                tenant.id(), aliceId, alicesSession.sessionId(), "1.2.3.4")))
+                .isInstanceOf(PolicyDeniedException.class);
+
+        // 세션은 그대로 활성.
+        assertThat(listService.list(tenant.id(), aliceId)).hasSize(2);
     }
 }
