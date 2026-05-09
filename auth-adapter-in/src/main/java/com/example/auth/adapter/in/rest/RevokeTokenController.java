@@ -2,6 +2,14 @@ package com.example.auth.adapter.in.rest;
 
 import com.example.auth.application.exception.PolicyDeniedException;
 import com.example.auth.application.port.in.RevokeTokenByAdminUseCase;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.Set;
@@ -28,14 +36,39 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "oauth2")
+@SecurityRequirement(name = "clientBasic")
 public class RevokeTokenController {
 
     private final RevokeTokenByAdminUseCase useCase;
     private final RegisteredClientRepository registeredClientRepository;
 
+    @Operation(
+            summary = "RFC 7009 Token Revocation (admin)",
+            description = """
+                    운영자 / 보안 콘솔이 사용자의 access JWT 또는 refresh token 을 강제 종료.
+                    호출 client 가 token.revoke scope 를 가져야 OPA 의 auth/token/revoke 정책을
+                    통과합니다 (일반 service client 는 거부).
+
+                    RFC 7009 §2.2 — 알 수 없는 token / 만료된 token / 다른 client 의 token
+                    모두 응답은 항상 200 (정보 누설 차단). 다만 권한 자체가 없는 호출은
+                    §2.2.1 의 unauthorized_client 처럼 403 으로 거부.
+                    """,
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+                            schema = @Schema(implementation = RevokeFormSchema.class))))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "RFC 7009 §2.2 — 항상 200, body 비어있음"),
+            @ApiResponse(responseCode = "401", description = "client_credentials Basic 인증 실패"),
+            @ApiResponse(responseCode = "403", description = "token.revoke scope 미보유 (OPA 거부)")
+    })
     @PostMapping(value = "/oauth2/revoke", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<Void> revoke(
+            @Parameter(description = "강제 종료할 access JWT 또는 refresh token (평문)", required = true)
             @RequestParam("token") String token,
+            @Parameter(description = "RFC 7009 §2.1 의 hint — access_token | refresh_token")
             @RequestParam(value = "token_type_hint", required = false) String tokenTypeHint,
             Authentication caller,
             HttpServletRequest http) {
@@ -72,5 +105,18 @@ public class RevokeTokenController {
             }
         }
         return scopes;
+    }
+
+    /**
+     * Springdoc 가 form-urlencoded body 의 schema 를 추출할 때 사용하는 표현 record.
+     * 본 record 는 직접 인스턴스화되지 않습니다 — schema 정의용.
+     */
+    @SuppressWarnings("unused")
+    @Schema(name = "RevokeForm", description = "RFC 7009 revocation request body")
+    public record RevokeFormSchema(
+            @Schema(description = "강제 종료할 token", requiredMode = Schema.RequiredMode.REQUIRED)
+            String token,
+            @Schema(description = "access_token | refresh_token", example = "refresh_token")
+            String token_type_hint) {
     }
 }

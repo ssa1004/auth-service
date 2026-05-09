@@ -17,8 +17,9 @@ dependencies {
     // OAuth2 Authorization Server — /oauth2/token /oauth2/jwks /.well-known/openid-configuration 자동 노출
     implementation("org.springframework.security:spring-security-oauth2-authorization-server")
 
-    // OpenAPI
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    // OpenAPI — Spring Boot 3.4 / Spring 6.2 와 ControllerAdviceBean signature 호환되는 2.7.0+ 필수.
+    // 2.6.0 은 NoSuchMethodError 발생 (GenericResponseService 가 6.1 시그니처 호출).
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
 
     // Tracing / Metrics
     implementation("io.micrometer:micrometer-tracing")
