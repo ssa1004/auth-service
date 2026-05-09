@@ -3,7 +3,6 @@ package com.example.auth.adapter.out.authz;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.auth.application.authz.PolicyDecisionRequest;
-import com.example.auth.application.authz.PolicyDecisionResult;
 import com.example.auth.domain.common.TenantId;
 import com.example.auth.domain.common.UserId;
 import java.util.Map;
@@ -153,9 +152,5 @@ class EmbeddedPolicyDecisionAdapterTest {
                         "sameNetwork", sameNetwork,
                         "secondsSinceRotation", sinceSec,
                         "graceWindowSeconds", graceSec));
-    }
-
-    private PolicyDecisionResult unused() {
-        return PolicyDecisionResult.allowed();
     }
 }
