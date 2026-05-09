@@ -79,8 +79,12 @@ docker compose -f infrastructure/docker/docker-compose.yml up postgres redis mai
 
 OIDC discovery: `http://localhost:8080/.well-known/openid-configuration`
 JWKS: `http://localhost:8080/oauth2/jwks`
-OpenAPI UI: `http://localhost:8080/swagger-ui.html`
+OpenAPI UI: `http://localhost:8080/swagger-ui.html` (env `AUTH_OPENAPI_ENABLED=true` 필요)
 Mailhog UI: `http://localhost:8025`
+
+> 운영(production)에서는 OpenAPI / Swagger UI 노출을 끄는 것을 기본으로 합니다
+> (`AUTH_OPENAPI_ENABLED=false`, default). IdP 의 endpoint 매핑 정보가 외부에 보일
+> 이유가 없고, 내부 사용 시 사설망 / VPN 안에서만 접근하도록 합니다.
 
 ## 주요 호출 흐름
 
