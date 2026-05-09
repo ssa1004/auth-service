@@ -114,6 +114,18 @@ auth:
   mfa:
     # 32 bytes base64 — 운영은 KMS / Vault. 로컬 개발용 placeholder.
     aes-key-base64: ${AUTH_MFA_AES_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+  audit:
+    # SIEM outbox worker 폴링 주기 (ms). 너무 짧으면 DB 부담, 너무 길면 SIEM 도달 지연.
+    outbox-poll-interval: 2000
+  jwk:
+    # 'local' — LocalFileKeyMaterialSource (디스크 파일, dev/local).
+    # 'kms'   — KmsKeyMaterialSource (운영, 본 시점은 placeholder — README wiring 가이드).
+    source: ${AUTH_JWK_SOURCE:local}
+    # local 백엔드의 파일 경로. 운영에서는 디스크 휘발 + pod 간 키 불일치 위험으로 절대 사용 금지.
+    local-path: ${AUTH_JWK_LOCAL_PATH:./local-jwk.json}
+  oidc:
+    # Google OIDC 매핑 시 사용자 도메인의 tenantSlug. multi-tenant 본격화 후 redirect URI 박제.
+    default-tenant-slug: ${AUTH_OIDC_DEFAULT_TENANT:default}
 
 logging:
   level:

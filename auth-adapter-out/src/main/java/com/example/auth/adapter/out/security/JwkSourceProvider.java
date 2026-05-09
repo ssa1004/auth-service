@@ -21,6 +21,17 @@ public class JwkSourceProvider {
         this.keys = new AtomicReference<>(List.of(initialCurrent));
     }
 
+    /**
+     * 부팅 시 외부 저장소 (KMS / file) 에서 previous 가 살아있던 경우 함께 주입하기 위한
+     * 생성자. 두 키 모두 grace period 동안 검증 통과 (ADR-0003, ADR-0014).
+     */
+    public JwkSourceProvider(JWK initialCurrent, JWK initialPrevious) {
+        this.keys = new AtomicReference<>(
+                initialPrevious == null
+                        ? List.of(initialCurrent)
+                        : List.of(initialCurrent, initialPrevious));
+    }
+
     /** 호출 시점의 모든 활성 키 (current + previous) — JWKS endpoint 가 이걸 그대로 노출. */
     public JWKSet jwkSet() {
         return new JWKSet(keys.get());
