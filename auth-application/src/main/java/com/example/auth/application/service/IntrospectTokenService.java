@@ -140,8 +140,11 @@ public class IntrospectTokenService implements IntrospectTokenUseCase {
             if (cmd.tokenTypeHint() != null) payload.put("hint", cmd.tokenTypeHint());
             if (cmd.callerClient() != null) payload.put("client", cmd.callerClient());
             // active 면 누구의 토큰인지 audit 에는 남겨야 운영자가 이상 패턴 (특정 사용자에
-            // 대한 introspect 폭증) 을 잡을 수 있음.
-            TenantId tenant = result.tenantId() != null ? TenantId.of(result.tenantId()) : null;
+            // 대한 introspect 폭증) 을 잡을 수 있음. inactive (가짜 토큰 / 외부 issuer) 은
+            // 사용자 컨텍스트가 없으므로 nil UUID 로 표현.
+            TenantId tenant = result.tenantId() != null
+                    ? TenantId.of(result.tenantId())
+                    : TenantId.of(NIL_UUID);
             UserId user = result.subject() != null ? UserId.of(result.subject()) : null;
             auditUseCase.record(
                     tenant, user, AuditEventType.TOKEN_INTROSPECTED,
@@ -151,6 +154,9 @@ public class IntrospectTokenService implements IntrospectTokenUseCase {
             log.warn("token introspect audit 적재 실패 — 결과는 정상 반환", e);
         }
     }
+
+    /** RFC 4122 의 nil UUID — "사용자 컨텍스트 없음" 을 audit 에 표현. */
+    private static final java.util.UUID NIL_UUID = new java.util.UUID(0L, 0L);
 
     private static boolean looksLikeJwt(String token) {
         // 가장 단순한 휴리스틱 — JWT 는 base64url . base64url . base64url 형식.
