@@ -29,6 +29,13 @@ spring:
 server:
   port: 0
 
+springdoc:
+  # e2e 는 OpenAPI spec 자체를 검증하므로 enable.
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 auth:
   access-token-ttl: PT15M
   refresh-token-ttl: P30D

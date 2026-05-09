@@ -93,9 +93,14 @@ management:
       application: ${spring.application.name}
 
 springdoc:
+  # 운영 (production profile) 에서는 OpenAPI 노출을 끕니다 — auth/IdP 의 attack surface
+  # 축소. dev / e2e 프로파일은 application-{profile}.yml 로 명시적으로 enable.
+  # auth.swagger.enabled 는 우리 자체 가드 (publicSecurityFilterChain 에서 함께 평가).
   api-docs:
+    enabled: ${AUTH_OPENAPI_ENABLED:false}
     path: /v3/api-docs
   swagger-ui:
+    enabled: ${AUTH_OPENAPI_ENABLED:false}
     path: /swagger-ui.html
 
 # auth.* — AuthPropertiesBinding 으로 주입.
