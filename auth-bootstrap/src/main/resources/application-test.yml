@@ -1,0 +1,19 @@
+spring:
+  jpa:
+    hibernate:
+      # 테스트는 H2 in-memory — Flyway 가 PostgreSQL dialect 라 ddl-auto 는 update.
+      ddl-auto: update
+  flyway:
+    enabled: false
+  datasource:
+    url: jdbc:h2:mem:auth;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  mail:
+    host: localhost
+    port: 25
+auth:
+  mfa:
+    # 테스트 전용 시드. 실제 비밀 아님.
+    aes-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
