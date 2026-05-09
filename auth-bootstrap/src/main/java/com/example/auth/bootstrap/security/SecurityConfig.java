@@ -19,7 +19,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
+import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -43,8 +43,15 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain authServerSecurityFilterChain(HttpSecurity http) throws Exception {
-        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+        OAuth2AuthorizationServerConfigurer asConfigurer = OAuth2AuthorizationServerConfigurer.authorizationServer();
+        // OIDC 명시 활성화 — /.well-known/openid-configuration / /userinfo / /connect/register
+        asConfigurer.oidc(Customizer.withDefaults());
+
         http
+                .securityMatcher(asConfigurer.getEndpointsMatcher())
+                .with(asConfigurer, Customizer.withDefaults())
+                .authorizeHttpRequests(reg -> reg.anyRequest().authenticated())
+                .csrf(csrf -> csrf.ignoringRequestMatchers(asConfigurer.getEndpointsMatcher()))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> res.sendError(401)))
                 .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()));
         return http.build();
@@ -72,7 +79,8 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(reg -> reg
                         .requestMatchers("/api/v1/auth/**", "/actuator/**", "/swagger-ui/**",
-                                "/v3/api-docs/**", "/error")
+                                "/v3/api-docs/**", "/error",
+                                "/.well-known/**")
                         .permitAll()
                         .anyRequest().denyAll());
         return http.build();

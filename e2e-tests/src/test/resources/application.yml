@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: auth-service-e2e
+  datasource:
+    # Testcontainers 의 @ServiceConnection 이 url/username/password 를 덮어씁니다.
+    # 명시하지 않으면 bootstrap 의 application.yml (jar 에 포함) 이 fallback 으로 적용됨.
+    url: jdbc:tc:postgresql:16-alpine:///auth
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      url: redis://localhost:6379
+  mail:
+    host: localhost
+    port: 25
+    properties:
+      mail:
+        smtp:
+          auth: false
+
+server:
+  port: 0
+
+auth:
+  access-token-ttl: PT15M
+  refresh-token-ttl: P30D
+  refresh-reuse-grace-period: PT5S
+  bcrypt-cost: 4   # e2e 테스트는 cost 낮춰서 속도 확보
+  login-rate-burst: 100
+  login-rate-window: PT1M
+  jwt-issuer: http://localhost:8080
+  mfa-issuer: auth-service
+  mail:
+    from: no-reply@e2e.example.com
+  mfa:
+    aes-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
