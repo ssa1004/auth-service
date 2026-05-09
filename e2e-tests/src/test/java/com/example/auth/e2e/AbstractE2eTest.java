@@ -11,8 +11,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -27,18 +25,27 @@ import org.testcontainers.utility.DockerImageName;
         classes = {AuthServiceApplication.class, AbstractE2eTest.E2eOverrides.class},
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @org.springframework.test.context.ActiveProfiles("e2e")
-@Testcontainers
 public abstract class AbstractE2eTest {
 
-    @Container
-    static RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:7-alpine"));
+    /**
+     * JVM-singleton — Spring Test 의 @ContextCache 는 클래스마다 캐시 키가 다르므로 각
+     * 클래스가 별도 RedisContainer 를 띄우면 재사용된 컨텍스트의 Redis URL 이 stale 해집니다.
+     * 컨테이너를 한 번만 시작하고 모든 e2e 클래스가 같은 redis 를 공유합니다 (JVM 종료 시
+     * Ryuk 가 정리).
+     */
+    static final RedisContainer REDIS;
+
+    static {
+        REDIS = new RedisContainer(DockerImageName.parse("redis:7-alpine"));
+        REDIS.start();
+    }
 
     @DynamicPropertySource
     static void redisProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+        registry.add("spring.data.redis.host", REDIS::getHost);
+        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
         registry.add("spring.data.redis.url",
-                () -> "redis://" + redis.getHost() + ":" + redis.getMappedPort(6379));
+                () -> "redis://" + REDIS.getHost() + ":" + REDIS.getMappedPort(6379));
     }
 
     @LocalServerPort
