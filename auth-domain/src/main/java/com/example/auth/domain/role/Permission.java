@@ -5,8 +5,8 @@ import java.util.Objects;
 /**
  * 가장 잘게 쪼갠 권한 단위. 형식은 {@code resource:action} (예: {@code billing:read}).
  *
- * <p>RBAC 의 *grant 단위* 는 Role 이지만, JWT claim 에는 user 가 받은 모든 Role 의
- * permission 합집합이 박제됩니다. 이렇게 하면 검증 측 (consumer service) 은 role lookup
+ * <p>RBAC 에서 grant 단위는 Role 이지만, JWT claim 에는 user 가 받은 모든 Role 의
+ * permission 합집합을 담습니다. 이렇게 하면 검증 측 (consumer service) 은 role lookup
  * 없이 permission 만으로 인가 결정을 내릴 수 있습니다.
  */
 public record Permission(String name) {

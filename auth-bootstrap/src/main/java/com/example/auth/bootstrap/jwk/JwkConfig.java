@@ -23,11 +23,11 @@ import org.springframework.context.annotation.Configuration;
 /**
  * JWK 의 단일 소스 빈 등록 (ADR-0003 + ADR-0014).
  *
- * <p>{@link KeyMaterialSource} 가 영구 저장소 (local file / KMS) 와 추상화. 여기서는
- * 부팅 시 current + previous 를 로드하여 {@link JwkSourceProvider} 에 주입.
+ * <p>{@link KeyMaterialSource} 가 영구 저장소 (local file / KMS) 를 추상화합니다. 여기서는
+ * 부팅 시 current + previous 를 로드하여 {@link JwkSourceProvider} 에 주입합니다.
  *
- * <p>{@link JwkRotationScheduler} 가 24시간마다 회전 — 회전 시 {@link KeyMaterialSource}
- * 에 박제 (KMS 또는 local-jwk.json).
+ * <p>{@link JwkRotationScheduler} 가 24시간마다 회전. 회전 시 {@link KeyMaterialSource}
+ * 에 영속화합니다 (KMS 또는 local-jwk.json).
  */
 @Configuration
 public class JwkConfig {

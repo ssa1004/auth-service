@@ -14,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Audit append + SIEM outbox 동시 INSERT (ADR-0012).
  *
- * <p>같은 트랜잭션 안에서 두 row 를 박제. 트랜잭션이 commit 되어야 둘 다 살아남으므로
- * "audit 만 적재되고 SIEM 으로 못 흐른" 사고가 안 남.
+ * <p>같은 트랜잭션 안에서 두 row 를 INSERT 합니다. 트랜잭션이 commit 되어야 둘 다
+ * 살아남으므로 "audit 만 적재되고 SIEM 으로 못 흐른" 사고가 발생하지 않습니다.
  */
 @Repository
 @RequiredArgsConstructor
