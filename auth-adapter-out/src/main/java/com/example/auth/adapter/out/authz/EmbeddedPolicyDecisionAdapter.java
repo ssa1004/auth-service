@@ -31,8 +31,28 @@ public class EmbeddedPolicyDecisionAdapter implements PolicyDecisionPort {
             case "auth/role/assign" -> roleAssign(request);
             case "auth/refresh/grace" -> refreshGrace(request);
             case "auth/tenant/isolation" -> tenantIsolation(request);
+            case "auth/token/revoke" -> tokenRevoke(request);
             default -> PolicyDecisionResult.denied("unknown_policy_path");
         };
+    }
+
+    private PolicyDecisionResult tokenRevoke(PolicyDecisionRequest req) {
+        // policies/token_revocation.rego 의 in-process 평가. clientId 와 scopes 만 결정 입력.
+        Object scopesObj = req.subject().attributes().get("scopes");
+        Object clientIdObj = req.subject().attributes().get("clientId");
+        boolean hasScope = false;
+        if (scopesObj instanceof java.util.Collection<?> col) {
+            for (Object s : col) {
+                if ("token.revoke".equals(String.valueOf(s))) { hasScope = true; break; }
+            }
+        }
+        boolean hasClientId = clientIdObj != null && !String.valueOf(clientIdObj).isBlank();
+        if (hasScope && hasClientId) return PolicyDecisionResult.allowed();
+
+        List<String> reasons = new ArrayList<>();
+        if (!hasScope) reasons.add("missing_token_revoke_scope");
+        if (!hasClientId) reasons.add("missing_client_id");
+        return PolicyDecisionResult.denied(reasons);
     }
 
     private PolicyDecisionResult sessionRevoke(PolicyDecisionRequest req) {
