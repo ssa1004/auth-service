@@ -103,7 +103,27 @@ curl -X POST localhost:8080/api/v1/auth/verify-mfa \
 # 5) 내 세션 목록 / revoke
 curl -H 'Authorization: Bearer <access>' localhost:8080/api/v1/me/sessions
 curl -X DELETE -H 'Authorization: Bearer <access>' localhost:8080/api/v1/me/sessions/<sessionId>
+
+# 6) Token Introspection (ADR-0017) — Resource Server 가 access / refresh 의 유효성을 직접 확인
+curl -X POST localhost:8080/oauth2/introspect \
+  -u internal-service:internal-service-secret-change-me \
+  -d 'token=<access_or_refresh>&token_type_hint=access_token'
+
+# 7) Token Revocation (ADR-0018) — 운영자 / 보안 콘솔이 강제 종료 (token.revoke scope 필요)
+curl -X POST localhost:8080/oauth2/revoke \
+  -u internal-admin:internal-admin-secret-change-me \
+  -d 'token=<access_or_refresh>&token_type_hint=refresh_token'
 ```
+
+### Resource Server 측 introspection 가이드
+
+introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가 필수입니다.
+권장값:
+
+- TTL = **10초** — admin revoke (ADR-0018) 가 모든 노드에 반영되는 SLA 가 최대 10초.
+  더 길게 잡으면 사용자 정지 시나리오의 차단 지연이 길어집니다.
+- 키 = `sha256(token)` — 평문 토큰을 cache 키로 두지 않음 (메모리 dump 위험).
+- introspect 응답의 `exp` 가 cache 만료보다 더 가까우면 그 시점까지만 cache.
 
 ## 빌드 / 테스트
 
@@ -116,10 +136,10 @@ curl -X DELETE -H 'Authorization: Bearer <access>' localhost:8080/api/v1/me/sess
 
 테스트 카운트:
 - domain: 26
-- application: 28
-- adapter-out: 9
-- bootstrap: 2
-- e2e: 5
+- application: 53
+- adapter-out: 25
+- bootstrap: 8
+- e2e: 10
 
 ## 인프라
 
@@ -133,7 +153,7 @@ curl -X DELETE -H 'Authorization: Bearer <access>' localhost:8080/api/v1/me/sess
 
 ## ADR
 
-15개 ADR 로 핵심 결정을 정리했습니다. 각 ADR 는 결정의 배경 / 선택 / 근거 / 장단점을
+18개 ADR 로 핵심 결정을 정리했습니다. 각 ADR 는 결정의 배경 / 선택 / 근거 / 장단점을
 짧게 정리하는 형식입니다.
 
 | 번호 | 제목 |
@@ -153,6 +173,9 @@ curl -X DELETE -H 'Authorization: Bearer <access>' localhost:8080/api/v1/me/sess
 | [0013](docs/adr/0013-social-login-oidc-skeleton.md) | Social login (OIDC) skeleton |
 | [0014](docs/adr/0014-key-material-source-abstraction.md) | JWK 외부 KMS 추상화 |
 | [0015](docs/adr/0015-refresh-reuse-grace-window.md) | Refresh reuse 의 grace window |
+| [0016](docs/adr/0016-opa-policy-decision.md) | OPA 기반 ABAC 정책 엔진 도입 |
+| [0017](docs/adr/0017-token-introspection-rfc-7662.md) | Token Introspection (RFC 7662) — JWT self-validate vs introspection |
+| [0018](docs/adr/0018-token-revocation-rfc-7009.md) | Token Revocation (RFC 7009) — admin 강제 revoke 표준 endpoint |
 
 ## 후속 작업
 
