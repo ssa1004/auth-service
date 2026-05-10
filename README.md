@@ -160,6 +160,64 @@ introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가
 - `.github/workflows/ci.yml` — `workflow_dispatch` only. `./gradlew check` → docker buildx
   (no push).
 
+## Portfolio Set 통합
+
+이 레포는 단독 IdP 가 아니라 8 레포 포트폴리오의 *issuer* 입니다. 다른 7 레포는 본 레포가
+발급한 JWT 를 받아 resource server 로서 검증합니다 (JWK Set 공개 — `/oauth2/jwks`,
+introspect — `/oauth2/introspect`, revoke — `/oauth2/revoke`). 프로필 README:
+[ssa1004/ssa1004](https://github.com/ssa1004/ssa1004).
+
+| 레포 | 한 줄 | 본 레포에서 본 관계 |
+| --- | --- | --- |
+| [auth-service](https://github.com/ssa1004/auth-service) | OAuth2 / OIDC IdP — JWT 발행 / JWK rotation / 2FA / introspect / revoke | 자신 (issuer) |
+| [resell-orderbook](https://github.com/ssa1004/resell-orderbook) | 주문 매칭 엔진 + 동시성 제어 | client_credentials 로 token 발급 후 주문 API 호출 |
+| [billing-platform](https://github.com/ssa1004/billing-platform) | 사용량 집계 / 청구서 / 결제 게이트웨이 | client_credentials 로 token 발급 후 결제 API 호출 |
+| [gpu-job-orchestrator](https://github.com/ssa1004/gpu-job-orchestrator) | GPU job 큐 / 스케줄러 | client_credentials 로 token 발급 후 job submit |
+| [search-service](https://github.com/ssa1004/search-service) | 검색 색인 + 질의 (OpenSearch) | client_credentials 로 색인 갱신 / 질의 |
+| [notification-hub](https://github.com/ssa1004/notification-hub) | 알림 fan-out (mail / push / slack) | client_credentials 로 알림 발송 trigger |
+| [security-log-search](https://github.com/ssa1004/security-log-search) | 감사 로그 / 보안 이벤트 검색 | 본 레포의 audit log 를 SIEM outbox 로 수신 |
+| [mini-shop-observability](https://github.com/ssa1004/mini-shop-observability) | MSA + observability 플레이그라운드 | 모든 레포 metric / trace / log 의 통합 대시보드 |
+
+### 발급 → 검증 흐름
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Caller (resell-orderbook 등)
+    participant A as auth-service (IdP)
+    participant R as Resource Server (해당 도메인)
+
+    C->>A: POST /oauth2/token (client_credentials, Basic auth)
+    A-->>C: access_token (RS256 JWT, exp=15m)
+    C->>R: 도메인 API + Authorization: Bearer <jwt>
+    R->>A: GET /oauth2/jwks (cached, kid 매칭 시 skip)
+    A-->>R: JWK Set
+    R-->>C: 200 OK (서명 + exp + scope 검증)
+    Note over R,A: 의심스러운 토큰은 /oauth2/introspect 로 즉시 active 여부 확인
+    Note over A: admin revoke 시 /oauth2/revoke → Redis 블록리스트 / refresh REVOKED_BY_ADMIN
+```
+
+검증 비용 절감을 위해 resource server 측은 JWK Set 을 캐싱하고 (kid mismatch 시에만 재조회),
+introspect 는 의심 / 강제 차단 시나리오에서만 호출합니다 (위 "Resource Server 측 introspection
+가이드" 참고).
+
+### 통합 시연
+
+레포 안에서 `client_credentials` 발급 → 가상 resource server 호출 → introspect → revoke 까지
+한 번에 돌려볼 수 있는 데모를 제공합니다.
+
+```bash
+# auth + demo resource server (nginx + JWKS 검증) 띄움
+docker compose -f infrastructure/docker/docker-compose.integration.yml up -d --build
+
+# 발급 / 호출 / introspect / revoke 시연
+./scripts/integration-demo.sh
+```
+
+데모 resource server 는 OpenResty + lua-resty-jwt 로 본 레포의 JWK Set 을 가져와 RS256
+서명 / `exp` / `iss` 를 in-process 검증합니다. 외부 의존은 컨테이너 안에서 닫혀 있고 실 외부
+API 호출은 없습니다.
+
 ## ADR
 
 18개 ADR 로 핵심 결정을 정리했습니다. 각 ADR 는 결정의 배경 / 선택 / 근거 / 장단점을
