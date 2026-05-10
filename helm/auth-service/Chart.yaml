@@ -1,0 +1,17 @@
+apiVersion: v2
+name: auth-service
+description: OAuth2 / OIDC IdP — JWT 발행, JWK rotation, refresh rotation, 2FA, audit
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - oauth2
+  - oidc
+  - identity-provider
+  - spring-authorization-server
+home: https://github.com/ssa1004/auth-service
+sources:
+  - https://github.com/ssa1004/auth-service
+maintainers:
+  - name: ssa1004
+    url: https://github.com/ssa1004

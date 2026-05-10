@@ -1,0 +1,22 @@
+# auth.* 의 구조화된 값과 config.* 의 free-form 값을 합쳐 K8s ConfigMap 의 평탄한
+# AUTH_* 키로 직렬화. config.* 는 사용자 override 우선 — 같은 키가 양쪽에 있으면
+# config.* 값이 이긴다.
+{{- $derived := dict
+  "AUTH_JWK_SOURCE" .Values.auth.jwk.source
+  "AUTH_JWK_LOCAL_PATH" .Values.auth.jwk.localPath
+  "AUTH_OPA_MODE" .Values.auth.opa.mode
+  "AUTH_OPA_BASE_URL" .Values.auth.opa.baseUrl
+  "AUTH_OPA_CALL_TIMEOUT" .Values.auth.opa.callTimeout
+  "AUTH_OIDC_DEFAULT_TENANT" .Values.auth.oidc.defaultTenantSlug
+}}
+{{- $merged := merge (deepCopy .Values.config) $derived }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "auth-service.fullname" . }}
+  labels:
+    {{- include "auth-service.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := $merged }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}

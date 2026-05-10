@@ -1,0 +1,36 @@
+{{ include "auth-service.fullname" . }} 설치 완료.
+
+배포된 release: {{ .Release.Name }} (namespace: {{ .Release.Namespace }})
+이미지:        {{ include "auth-service.image" . }}
+replica:       {{ .Values.replicaCount }} ({{ if .Values.autoscaling.enabled }}HPA on{{ else }}HPA off{{ end }})
+
+확인:
+  kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+  kubectl -n {{ .Release.Namespace }} logs -l app.kubernetes.io/instance={{ .Release.Name }} --tail=50
+
+{{- if .Values.ingress.enabled }}
+
+ingress:
+{{- range .Values.ingress.hosts }}
+  - https://{{ .host }}/.well-known/openid-configuration
+  - https://{{ .host }}/oauth2/jwks
+{{- end }}
+{{- else }}
+
+ingress 비활성. port-forward 로 확인:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "auth-service.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://localhost:8080/actuator/health
+  curl http://localhost:8080/.well-known/openid-configuration
+{{- end }}
+
+{{- if eq .Values.auth.jwk.source "local" }}
+
+주의: JWK 백엔드가 'local' (디스크) 입니다 — pod 간 키 불일치 위험으로 운영 사용 금지.
+운영은 values-prod.yaml 의 auth.jwk.source=kms 와 외부 secret 주입을 사용하세요.
+{{- end }}
+
+{{- if and .Values.secret.create (eq .Values.secret.secrets.SPRING_DATASOURCE_PASSWORD "REPLACE_AT_DEPLOY_TIME") }}
+
+경고: chart 가 placeholder Secret 을 만든 상태입니다 — Postgres password / MFA AES key 가
+유효하지 않습니다. SealedSecret / ExternalSecret 으로 대체하거나 --set 으로 실 값 주입.
+{{- end }}
