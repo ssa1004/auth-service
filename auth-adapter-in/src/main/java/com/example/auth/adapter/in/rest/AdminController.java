@@ -1,6 +1,7 @@
 package com.example.auth.adapter.in.rest;
 
 import com.example.auth.adapter.in.security.AuthenticatedUser;
+import com.example.auth.adapter.in.security.ClientIpResolver;
 import com.example.auth.application.port.in.AssignRoleUseCase;
 import com.example.auth.domain.common.UserId;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 
     private final AssignRoleUseCase assignRoleUseCase;
+    private final ClientIpResolver clientIpResolver;
 
     /**
      * 운영자가 사용자에 role 부여. 실제로는 {@code admin:write} permission 필요 — JWT
@@ -54,7 +56,7 @@ public class AdminController {
             HttpServletRequest http) {
         assignRoleUseCase.assign(new AssignRoleUseCase.Command(
                 actor.tenantId(), UserId.of(userId), req.roleId(),
-                actor.userId(), http.getRemoteAddr()));
+                actor.userId(), clientIpResolver.resolve(http)));
         return ResponseEntity.noContent().build();
     }
 

@@ -2,6 +2,7 @@ package com.example.auth.application.security;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * 보안 정책 단일 진입점. 코드 곳곳에 흩어지면 정책 변경이 누락되므로 한 곳에 모읍니다.
@@ -18,6 +19,7 @@ public record AuthProperties(
         Duration loginRateWindow,
         String jwtIssuer,
         String mfaIssuer,
+        List<String> trustedProxies,
         Opa opa) {
 
     public static AuthProperties defaults() {
@@ -30,6 +32,7 @@ public record AuthProperties(
                 Duration.ofMinutes(1),
                 "https://auth.example.com",
                 "auth-service",
+                List.of(),
                 Opa.embedded());
     }
 

@@ -3,6 +3,7 @@ package com.example.auth.adapter.in.rest;
 import com.example.auth.application.port.in.ListMySessionsUseCase;
 import com.example.auth.application.port.in.RevokeSessionUseCase;
 import com.example.auth.adapter.in.security.AuthenticatedUser;
+import com.example.auth.adapter.in.security.ClientIpResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -28,6 +29,7 @@ public class SessionController {
 
     private final ListMySessionsUseCase listMySessionsUseCase;
     private final RevokeSessionUseCase revokeSessionUseCase;
+    private final ClientIpResolver clientIpResolver;
 
     @Operation(
             summary = "내 세션 목록",
@@ -58,7 +60,7 @@ public class SessionController {
             @PathVariable UUID sessionId,
             HttpServletRequest http) {
         revokeSessionUseCase.revoke(new RevokeSessionUseCase.Command(
-                me.tenantId(), me.userId(), sessionId, http.getRemoteAddr()));
+                me.tenantId(), me.userId(), sessionId, clientIpResolver.resolve(http)));
         return ResponseEntity.noContent().build();
     }
 }

@@ -1,5 +1,6 @@
 package com.example.auth.adapter.in.rest;
 
+import com.example.auth.adapter.in.security.ClientIpResolver;
 import com.example.auth.application.exception.PolicyDeniedException;
 import com.example.auth.application.port.in.RevokeTokenByAdminUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +43,7 @@ public class RevokeTokenController {
 
     private final RevokeTokenByAdminUseCase useCase;
     private final RegisteredClientRepository registeredClientRepository;
+    private final ClientIpResolver clientIpResolver;
 
     @Operation(
             summary = "RFC 7009 Token Revocation (admin)",
@@ -76,7 +78,7 @@ public class RevokeTokenController {
         Set<String> scopes = resolveScopes(callerClient, caller);
         try {
             useCase.revoke(new RevokeTokenByAdminUseCase.Command(
-                    token, tokenTypeHint, callerClient, scopes, http.getRemoteAddr()));
+                    token, tokenTypeHint, callerClient, scopes, clientIpResolver.resolve(http)));
             return ResponseEntity.ok().build();
         } catch (PolicyDeniedException ex) {
             // RFC 7009 의 200 응답 규칙은 *유효한 client* 가 알 수 없는 token 을 보낼 때만

@@ -45,6 +45,11 @@ auth:
   login-rate-window: PT1M
   jwt-issuer: http://localhost:8080
   mfa-issuer: auth-service
+  # E2E 는 loopback 에서만 호출하므로 loopback 을 trusted proxy 로 등록 — X-Forwarded-For
+  # 시나리오 (grace 우회 검증) 가 살아있도록.
+  trusted-proxies:
+    - 127.0.0.1/32
+    - "::1/128"
   mail:
     from: no-reply@e2e.example.com
   mfa:
