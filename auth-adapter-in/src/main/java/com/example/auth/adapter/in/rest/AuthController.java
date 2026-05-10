@@ -1,5 +1,6 @@
 package com.example.auth.adapter.in.rest;
 
+import com.example.auth.adapter.in.security.ClientIpResolver;
 import com.example.auth.application.exception.MfaRequiredException;
 import com.example.auth.application.port.in.LoginUseCase;
 import com.example.auth.application.port.in.RefreshTokenUseCase;
@@ -37,6 +38,7 @@ public class AuthController {
     private final LoginUseCase loginUseCase;
     private final VerifyMfaUseCase verifyMfaUseCase;
     private final RefreshTokenUseCase refreshTokenUseCase;
+    private final ClientIpResolver clientIpResolver;
 
     @Operation(
             summary = "회원가입",
@@ -74,7 +76,7 @@ public class AuthController {
                     req.tenantSlug(),
                     req.email(),
                     req.password(),
-                    clientIp(http),
+                    clientIpResolver.resolve(http),
                     http.getHeader("User-Agent"),
                     req.deviceLabel()));
             return ResponseEntity.ok(TokenResponse.from(tokens));
@@ -100,7 +102,7 @@ public class AuthController {
         AuthTokens tokens = verifyMfaUseCase.verify(new VerifyMfaUseCase.Command(
                 req.mfaToken(),
                 req.code(),
-                clientIp(http),
+                clientIpResolver.resolve(http),
                 http.getHeader("User-Agent"),
                 req.deviceLabel()));
         return ResponseEntity.ok(TokenResponse.from(tokens));
@@ -122,17 +124,7 @@ public class AuthController {
             @Valid @RequestBody RefreshRequest req,
             HttpServletRequest http) {
         AuthTokens tokens = refreshTokenUseCase.refresh(new RefreshTokenUseCase.Command(
-                req.refreshToken(), clientIp(http), http.getHeader("User-Agent")));
+                req.refreshToken(), clientIpResolver.resolve(http), http.getHeader("User-Agent")));
         return ResponseEntity.ok(TokenResponse.from(tokens));
-    }
-
-    private static String clientIp(HttpServletRequest http) {
-        // 운영에서는 reverse proxy 의 X-Forwarded-For 가 있으나 본 단계에서는 단순 처리.
-        String xff = http.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            int comma = xff.indexOf(',');
-            return comma > 0 ? xff.substring(0, comma).trim() : xff.trim();
-        }
-        return http.getRemoteAddr();
     }
 }

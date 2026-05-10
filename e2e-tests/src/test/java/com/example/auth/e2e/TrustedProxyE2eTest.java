@@ -13,17 +13,20 @@ import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
 
 /**
- * 실 Postgres + Redis + 전체 부팅된 Spring + REST 호출.
+ * X-Forwarded-For 위조 차단의 종단간 검증.
  *
- * <p>시나리오:
- * 1. POST /api/v1/auth/register 로 신규 사용자 가입
- * 2. POST /api/v1/auth/login 으로 access + refresh 발급
- * 3. POST /api/v1/auth/refresh 로 회전
- * 4. 회전된 token 을 다시 보내 reuse detection → 401
+ * <p>{@link RegisterAndLoginE2eTest} 는 loopback 을 trusted-proxy 로 등록한 *기본* 환경에서
+ * 헤더가 적용되는 흐름을 검증합니다. 본 클래스는 그 반대 — trusted-proxies 를 빈 목록으로
+ * 덮어써 *외부 직접 호출자 시뮬레이션* 환경을 만든 뒤, X-Forwarded-For 위조 시도가 무시되어
+ * 같은 IP 처리 (= refresh reuse grace 진입) 되는지 확인합니다.
+ *
+ * <p>회귀 락다운 — 운영 default 인 빈 trusted-proxies 환경에서 위조가 통하지 않음을 보장.
  */
-class RegisterAndLoginE2eTest extends AbstractE2eTest {
+@TestPropertySource(properties = "auth.trusted-proxies=")
+class TrustedProxyE2eTest extends AbstractE2eTest {
 
     @Autowired TenantRepository tenantRepository;
 
@@ -37,55 +40,41 @@ class RegisterAndLoginE2eTest extends AbstractE2eTest {
     }
 
     @Test
-    void 회원가입_로그인_refresh_회전_그리고_reuse_detection_까지() throws Exception {
-        // 1) register
-        HttpResponse<String> reg = post("/api/v1/auth/register", """
-                {"tenantSlug":"acme","email":"e2e+%d@example.com","password":"longenoughpw1234"}
-                """.formatted(System.nanoTime()));
-        assertThat(reg.statusCode()).isEqualTo(201);
-        String email = json(reg.body(), "userId") != null
-                ? extract(reg.request().bodyPublisher().toString(), "email")
-                : "";
-
-        // 같은 사용자로 로그인 — request body 에서 email 을 꺼내기 위해 body 를 재구성.
-        // 단순화: 새로 register 하지 않고, 같은 email 로 즉시 로그인.
-        String userEmail = "e2e+login@example.com";
+    void trusted_proxy_가_비어있으면_위조된_X_Forwarded_For_는_무시되어_grace_가_적용됨() throws Exception {
+        // 1) register + login → refresh / access 발급
+        String email = "trusted+" + System.nanoTime() + "@example.com";
         post("/api/v1/auth/register", """
                 {"tenantSlug":"acme","email":"%s","password":"longenoughpw1234"}
-                """.formatted(userEmail));
-
-        // 2) login
+                """.formatted(email));
         HttpResponse<String> login = post("/api/v1/auth/login", """
-                {"tenantSlug":"acme","email":"%s","password":"longenoughpw1234","deviceLabel":"e2e"}
-                """.formatted(userEmail));
+                {"tenantSlug":"acme","email":"%s","password":"longenoughpw1234","deviceLabel":"trust"}
+                """.formatted(email));
         assertThat(login.statusCode()).isEqualTo(200);
-        String access = json(login.body(), "accessToken");
         String refresh = json(login.body(), "refreshToken");
-        assertThat(access).startsWith("ey");
-        assertThat(refresh).isNotBlank();
 
-        // 3) refresh 정상 회전
+        // 2) 정상 회전 — 같은 loopback IP 로
         HttpResponse<String> rotated = post("/api/v1/auth/refresh", """
                 {"refreshToken":"%s"}
                 """.formatted(refresh));
         assertThat(rotated.statusCode()).isEqualTo(200);
         String newRefresh = json(rotated.body(), "refreshToken");
-        assertThat(newRefresh).isNotEqualTo(refresh);
 
-        // 4) 회전된 refresh 를 다시 사용 → reuse detection.
-        //    grace 윈도우 (5초, ADR-0015) 우회를 위해 다른 IP 로 가정하는 X-Forwarded-For 사용.
-        HttpResponse<String> reuse = postWithIp("/api/v1/auth/refresh",
-                """
+        // 3) 회전된 token 을 X-Forwarded-For 위조해서 다시 보냄.
+        //    trusted-proxies 가 비어있으므로 위조 헤더는 무시 → 같은 IP (= loopback) 처리
+        //    → grace window 안 + sameNetwork=true → 401 (RefreshReuseDetected 가 아닌 InvalidCredentials).
+        HttpResponse<String> reuse = postWithIp("/api/v1/auth/refresh", """
                 {"refreshToken":"%s"}
                 """.formatted(refresh), "9.9.9.9");
         assertThat(reuse.statusCode()).isEqualTo(401);
-        assertThat(reuse.body()).contains("refresh_reuse_detected");
+        // grace 처리는 invalid_credentials, 진짜 reuse 는 refresh_reuse_detected.
+        // 위조가 *통했다면* refresh_reuse_detected 가 나와야 하지만, 차단됐으니 그렇지 않음.
+        assertThat(reuse.body()).doesNotContain("refresh_reuse_detected");
 
-        // 5) 새 refresh 도 사용 불가 (모든 세션 강제 revoke 됨)
-        HttpResponse<String> afterReuse = post("/api/v1/auth/refresh", """
+        // 4) 새 refresh 는 여전히 살아있어야 함 (grace 처리 → 일괄 revoke 트리거 안 됨).
+        HttpResponse<String> stillAlive = post("/api/v1/auth/refresh", """
                 {"refreshToken":"%s"}
                 """.formatted(newRefresh));
-        assertThat(afterReuse.statusCode()).isEqualTo(401);
+        assertThat(stillAlive.statusCode()).isEqualTo(200);
     }
 
     private HttpResponse<String> post(String path, String body) throws Exception {
@@ -97,13 +86,6 @@ class RegisterAndLoginE2eTest extends AbstractE2eTest {
                 HttpResponse.BodyHandlers.ofString());
     }
 
-    /**
-     * X-Forwarded-For 로 다른 client IP 를 가정 — grace 윈도우 회피 (ADR-0015) 검증용.
-     *
-     * <p>e2e 의 호출자는 loopback (127.0.0.1) 이고 application.yml 에서 loopback 을
-     * trusted-proxies 로 등록했으므로 헤더가 적용됩니다. 운영에서는 LB 의 사설 CIDR 만
-     * trusted 로 설정 — 외부 직접 호출자의 X-Forwarded-For 는 위조로 간주되어 무시됩니다.
-     */
     private HttpResponse<String> postWithIp(String path, String body, String forwardedIp) throws Exception {
         return http.send(HttpRequest.newBuilder(URI.create(baseUrl() + path))
                         .timeout(Duration.ofSeconds(60))
@@ -115,17 +97,11 @@ class RegisterAndLoginE2eTest extends AbstractE2eTest {
     }
 
     private static String json(String body, String key) {
-        // 매우 단순한 JSON 파서 — 따옴표로 감싼 값만 추출. e2e 검증 용도로만.
         String prefix = "\"" + key + "\":\"";
         int start = body.indexOf(prefix);
         if (start < 0) return null;
         start += prefix.length();
         int end = body.indexOf("\"", start);
-        if (end < 0) return null;
-        return body.substring(start, end);
-    }
-
-    private static String extract(String body, String key) {
-        return body;
+        return end < 0 ? null : body.substring(start, end);
     }
 }

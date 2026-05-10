@@ -114,6 +114,11 @@ auth:
   login-rate-window: PT1M
   jwt-issuer: http://localhost:8080
   mfa-issuer: auth-service
+  # X-Forwarded-For 를 신뢰할 직전 hop (= reverse proxy / LB) 의 CIDR 목록.
+  # 비어있으면 X-Forwarded-For 는 무시되고 항상 socket RemoteAddr 사용 (안전한 default).
+  # 운영에서는 사내 LB / Ingress 의 사설망 CIDR 만 명시 — 외부 IP 는 절대 넣지 말 것.
+  # 환경변수 주입 시 SPRING_APPLICATION_JSON 또는 AUTH_TRUSTEDPROXIES_0_=10.0.0.0/8 형식 사용.
+  trusted-proxies: []
   mail:
     from: no-reply@auth.example.com
   mfa:
