@@ -4,6 +4,7 @@ import com.example.auth.application.security.AuthProperties;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,6 +36,7 @@ public class AuthPropertiesConfig {
                 b.loginRateWindow != null ? b.loginRateWindow : Duration.ofMinutes(1),
                 b.jwtIssuer != null ? b.jwtIssuer : "https://auth.example.com",
                 b.mfaIssuer != null ? b.mfaIssuer : "auth-service",
+                b.trustedProxies != null ? List.copyOf(b.trustedProxies) : List.of(),
                 new AuthProperties.Opa(
                         opa.mode != null ? opa.mode : "embedded",
                         opa.baseUrl,
@@ -56,6 +58,7 @@ public class AuthPropertiesConfig {
         public Duration loginRateWindow;
         public String jwtIssuer;
         public String mfaIssuer;
+        public List<String> trustedProxies;
         public OpaBinding opa;
 
         public Duration getAccessTokenTtl() { return accessTokenTtl; }
@@ -74,6 +77,8 @@ public class AuthPropertiesConfig {
         public void setJwtIssuer(String v) { this.jwtIssuer = v; }
         public String getMfaIssuer() { return mfaIssuer; }
         public void setMfaIssuer(String v) { this.mfaIssuer = v; }
+        public List<String> getTrustedProxies() { return trustedProxies; }
+        public void setTrustedProxies(List<String> v) { this.trustedProxies = v; }
         public OpaBinding getOpa() { return opa; }
         public void setOpa(OpaBinding v) { this.opa = v; }
 
