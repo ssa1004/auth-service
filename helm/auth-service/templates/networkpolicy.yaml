@@ -1,0 +1,32 @@
+{{- if .Values.networkPolicy.enabled -}}
+# 운영 NetworkPolicy — ingress 는 ingress-controller / 같은 namespace 에서만 받음.
+# egress 는 namespace DNS + Postgres / Redis / SMTP 가 보통 필요 — 클러스터 별로
+# CIDR / 라벨이 달라 본 chart 는 ingress 만 강제하고 egress 는 운영자 추가 정책으로 보완.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "auth-service.fullname" . }}
+  labels:
+    {{- include "auth-service.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "auth-service.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # ingress controller 에서 오는 트래픽 허용 (8080).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+    # 같은 namespace 의 다른 service (introspect / jwks 호출) 허용.
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+{{- end }}
