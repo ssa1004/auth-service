@@ -88,22 +88,36 @@ public class RevokeTokenController {
     }
 
     /**
-     * 호출 client 의 scope 집합을 결정합니다. Spring AS 의 RegisteredClient 가 보유 scope
-     * 목록을 가지고 있고, HttpBasic 인증된 client_id 로 lookup 합니다.
+     * 호출 client 의 scope 집합을 결정합니다.
+     *
+     * <p>두 소스를 *합치지* 않고 우선순위로 선택합니다 — 합산은 권한 over-broad 위험이 있어
+     * 잘못된 모델입니다 (예: grant flow 가 발급 scope 을 다운스코프했는데, RegisteredClient
+     * 의 상한치까지 합쳐 OPA 에 전달하면 grant 의 의미가 무력화).
+     *
+     * <ol>
+     *   <li>caller (Spring Security) 가 SCOPE_* authority 를 가지면 = OAuth2 grant 로 발급된
+     *       access token 의 실제 scope. 이것이 exercised privilege 의 정확한 표현.</li>
+     *   <li>그렇지 않으면 (HttpBasic 등 grant 비경유) RegisteredClient.getScopes() 를 fallback —
+     *       client 의 capability 전체. Basic 인증은 grant 가 없어 capability = privilege.</li>
+     * </ol>
      */
     private Set<String> resolveScopes(String clientId, Authentication caller) {
-        Set<String> scopes = new HashSet<>();
-        if (caller != null) {
-            for (GrantedAuthority a : caller.getAuthorities()) {
-                if (a.getAuthority().startsWith("SCOPE_")) {
-                    scopes.add(a.getAuthority().substring("SCOPE_".length()));
-                }
-            }
+        Set<String> grantedScopes = extractScopesFromAuthorities(caller);
+        if (!grantedScopes.isEmpty()) {
+            return grantedScopes;
         }
-        if (clientId != null) {
-            RegisteredClient rc = registeredClientRepository.findByClientId(clientId);
-            if (rc != null && rc.getScopes() != null) {
-                scopes.addAll(rc.getScopes());
+        if (clientId == null) return Set.of();
+        RegisteredClient rc = registeredClientRepository.findByClientId(clientId);
+        if (rc == null || rc.getScopes() == null) return Set.of();
+        return Set.copyOf(rc.getScopes());
+    }
+
+    private static Set<String> extractScopesFromAuthorities(Authentication caller) {
+        if (caller == null) return Set.of();
+        Set<String> scopes = new HashSet<>();
+        for (GrantedAuthority a : caller.getAuthorities()) {
+            if (a.getAuthority().startsWith("SCOPE_")) {
+                scopes.add(a.getAuthority().substring("SCOPE_".length()));
             }
         }
         return scopes;
