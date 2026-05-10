@@ -1,0 +1,191 @@
+# 기본값 (dev). 운영은 values-prod.yaml 로 override.
+# 본 chart 는 외부 의존 (Postgres / Redis / Mailhog) 을 자체 포함하지 않습니다 —
+# 클러스터에 이미 존재한다고 가정하고 endpoint 만 주입합니다.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/ssa1004/auth-service
+  tag: ""              # 비워두면 .Chart.AppVersion 사용
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+replicaCount: 2
+
+# Pod-level securityContext — readOnlyRootFs + non-root + seccomp default.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# RollingUpdate — auth 는 단순 stateless. surge 1 / unavailable 0 으로 무중단 롤아웃.
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# ADR-0011 — graceful shutdown.
+# preStop sleep 으로 endpoint 제거 전파 race 를 흡수, Spring graceful 25s + 여유 = 60s.
+terminationGracePeriodSeconds: 60
+preStopSleepSeconds: 10
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1024Mi"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: http      # 컨테이너 port 이름
+  annotations: {}
+
+# Spring actuator 기준 3종 probe (ADR-0010).
+# startupProbe 가 통과해야 readiness / liveness 가 동작 — 부팅 느린 인스턴스 보호.
+probes:
+  startup:
+    path: /actuator/health/readiness
+    periodSeconds: 5
+    failureThreshold: 30          # 5s * 30 = 150s 까지 부팅 허용
+    timeoutSeconds: 2
+  readiness:
+    path: /actuator/health/readiness
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  liveness:
+    path: /actuator/health/liveness
+    periodSeconds: 20
+    failureThreshold: 3
+    timeoutSeconds: 2
+
+# Prometheus scrape annotation — actuator/prometheus.
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/actuator/prometheus"
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: auth.example.com
+      paths:
+        # IdP 가 외부에 노출해야 하는 path 만 선택적으로 열기.
+        - path: /oauth2
+          pathType: Prefix
+        - path: /.well-known
+          pathType: Prefix
+        - path: /api/v1/admin
+          pathType: Prefix
+        - path: /actuator/health
+          pathType: Prefix
+  tls: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 75
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      stabilizationWindowSeconds: 30
+
+# 운영은 minAvailable=1 로 PDB 활성. dev 는 비활성 기본.
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# NetworkPolicy — 운영에서는 enable 후 ingress / egress 명시.
+networkPolicy:
+  enabled: false
+
+serviceAccount:
+  create: true
+  name: ""               # 비우면 fullname 사용
+  annotations: {}
+
+# auth-service 환경 변수.
+# - configEnv  → ConfigMap envFrom (비밀 아님)
+# - secretEnv  → Secret envFrom    (운영은 SealedSecret / ExternalSecret 으로 대체)
+# - extraEnvFrom → 사외 secret 참조 (envFrom 추가)
+config:
+  AUTH_JWT_ISSUER: "http://localhost:8080"
+  AUTH_ACCESS_TOKEN_TTL: "PT15M"
+  AUTH_REFRESH_TOKEN_TTL: "P30D"
+  AUTH_BCRYPT_COST: "12"
+  AUTH_LOGIN_RATE_BURST: "10"
+  AUTH_LOGIN_RATE_WINDOW: "PT1M"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://auth-postgres:5432/auth"
+  SPRING_DATA_REDIS_URL: "redis://auth-redis:6379"
+  SPRING_MAIL_HOST: "auth-mailhog"
+  SPRING_MAIL_PORT: "1025"
+  AUTH_OPENAPI_ENABLED: "false"
+
+# JWK 백엔드 — local (dev) / kms (운영, 외부 KMS / Vault wiring 별도).
+# 운영에서는 secret.secrets 에 평문 두지 말고 extraEnvFrom 으로 외부 secret reference.
+auth:
+  jwk:
+    source: local                 # local | kms
+    localPath: /var/auth/jwk/local-jwk.json
+  opa:
+    mode: embedded                # embedded | sidecar
+    baseUrl: http://localhost:8181
+    callTimeout: PT0.1S
+  oidc:
+    defaultTenantSlug: default
+
+# OPA sidecar — auth.opa.mode=sidecar 일 때만 의미.
+opaSidecar:
+  enabled: false
+  image:
+    repository: openpolicyagent/opa
+    tag: "1.0.0-rootless"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+# secret.create=true 일 때만 chart 자체 Secret 생성 (placeholder).
+# 운영은 SealedSecret / ExternalSecret 으로 대체하고 create=false + extraEnvFrom 사용.
+secret:
+  create: true
+  secrets:
+    SPRING_DATASOURCE_USERNAME: "auth"
+    SPRING_DATASOURCE_PASSWORD: "REPLACE_AT_DEPLOY_TIME"
+    AUTH_MFA_AES_KEY: "REPLACE_AT_DEPLOY_TIME"
+    AUTH_OAUTH2_DEMO_CLIENT_SECRET: "REPLACE_AT_DEPLOY_TIME"
+
+# 추가 envFrom — 외부 SealedSecret / ExternalSecret 의 결과 Secret 을 참조할 때 사용.
+# 예: extraEnvFrom: [{ secretRef: { name: auth-vault-secrets } }]
+extraEnvFrom: []
+
+# emptyDir mount — readOnlyRootFs 환경에서 Spring 임시 파일.
+extraVolumes: []
+extraVolumeMounts: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
