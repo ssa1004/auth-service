@@ -157,8 +157,37 @@ introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가
 - `infrastructure/k8s/` — namespace / configmap / secret(skeleton) / deployment / service
   / hpa / pdb. `readOnlyRootFilesystem`, `runAsNonRoot`, `seccomp RuntimeDefault`,
   `drop ALL caps`.
+- `helm/auth-service/` — 같은 manifest 의 Helm chart 버전. dev / staging / prod 환경 분기를
+  values 로 처리 (자세한 설명은 [Deployment](#deployment) 절).
 - `.github/workflows/ci.yml` — `workflow_dispatch` only. `./gradlew check` → docker buildx
   (no push).
+
+## Deployment
+
+raw K8s manifest (`infrastructure/k8s/`) 와 동일한 모양을 Helm chart 로도 제공합니다.
+환경별 분기를 `values.yaml` (dev) / `values-prod.yaml` (prod) 로 나눠 관리합니다.
+
+```bash
+# dev — 기본 values
+helm install auth-service ./helm/auth-service \
+  --namespace auth --create-namespace
+
+# prod — values-prod.yaml override + image tag / host 주입
+helm upgrade auth-service ./helm/auth-service \
+  --namespace auth \
+  --values ./helm/auth-service/values-prod.yaml \
+  --set image.tag=v0.1.0 \
+  --set ingress.hosts[0].host=auth.your-domain.com
+
+# 검증
+helm lint ./helm/auth-service
+helm template ./helm/auth-service --values ./helm/auth-service/values-prod.yaml
+```
+
+prod 차이: replica 3 + HPA (cpu 70% / memory 80%, min 2 max 10), ingress + TLS, 보수적 probe
+threshold, OPA sidecar (ADR-0016), JWK 는 KMS / Vault (`secret.create=false` + `extraEnvFrom`
+로 외부 SealedSecret / ExternalSecret 참조). 자세한 사용법은
+[`helm/auth-service/README.md`](helm/auth-service/README.md) 참고.
 
 ## Portfolio Set 통합
 
