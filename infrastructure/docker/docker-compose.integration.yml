@@ -1,0 +1,72 @@
+# Portfolio set 통합 시연용 compose.
+#
+# 목적:
+#   - auth-service (IdP) 자기 자신과 가상 resource server 한 개를 한 네트워크에 띄움
+#   - client_credentials 발급 → resource server 호출 → introspect → revoke 의 전 과정을
+#     컨테이너 안에서 닫힘 검증
+#
+# 기존 infrastructure/docker/docker-compose.yml 과 별개입니다.
+# - 기존 compose: 일반 로컬 개발 (Mailhog 포함)
+# - 이 compose: 통합 시연 — Mailhog 빠지고 OpenResty 데모 resource server 추가
+#
+# 실행:
+#   docker compose -f infrastructure/docker/docker-compose.integration.yml up -d --build
+#   ../../scripts/integration-demo.sh
+name: auth-integration
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  auth:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth
+      SPRING_DATASOURCE_USERNAME: auth
+      SPRING_DATASOURCE_PASSWORD: auth
+      SPRING_DATA_REDIS_URL: redis://redis:6379
+      # Mail 의존을 끊기 위해 application.yml 의 기본 SMTP 호스트 무효화 — 기능 mock.
+      SPRING_MAIL_HOST: localhost
+      SPRING_MAIL_PORT: "1025"
+      # 32 bytes base64 — 시연용 시드. 운영 commit 금지.
+      AUTH_MFA_AES_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      # JWT issuer 가 컨테이너 내부 hostname 으로 발급되어야 resource server 가 같은 값으로
+      # 검증 가능. 외부 노출 없이 닫힘.
+      AUTH_JWT_ISSUER: http://auth:8080
+    ports:
+      - "8080:8080"
+
+  resource-server-demo:
+    # OpenResty + lua-resty-jwt 로 RS256 JWT 의 서명 / exp / iss / scope 검증을 in-process
+    # 처리. JWK Set 은 auth-service 의 /oauth2/jwks 에서 가져와 1분 캐시.
+    build:
+      context: ./resource-server-demo
+    depends_on:
+      auth:
+        condition: service_started
+    environment:
+      AUTH_JWT_ISSUER: http://auth:8080
+    ports:
+      - "9090:8080"
