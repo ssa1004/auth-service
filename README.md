@@ -146,9 +146,10 @@ introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가
 테스트 카운트:
 - domain: 26
 - application: 53
+- adapter-in: 13
 - adapter-out: 46 (OPA Rego ↔ embedded 동등성 21 케이스 포함)
 - bootstrap: 8
-- e2e: 16 (OpenAPI spec 정확성 4 + JWK rotation 시나리오 2 포함)
+- e2e: 17 (OpenAPI spec 정확성 4 + JWK rotation 시나리오 2 포함)
 
 ## 인프라
 
@@ -196,7 +197,7 @@ threshold, OPA sidecar (ADR-0016), JWK 는 KMS / Vault (`secret.create=false` + 
 introspect — `/oauth2/introspect`, revoke — `/oauth2/revoke`). 프로필 README:
 [ssa1004/ssa1004](https://github.com/ssa1004/ssa1004).
 
-| 레포 | 한 줄 | 본 레포에서 본 관계 |
+| 레포 | 한 줄 소개 | 본 레포와의 관계 |
 | --- | --- | --- |
 | [auth-service](https://github.com/ssa1004/auth-service) | OAuth2 / OIDC IdP — JWT 발행 / JWK rotation / 2FA / introspect / revoke | 자신 (issuer) |
 | [resell-orderbook](https://github.com/ssa1004/resell-orderbook) | 주문 매칭 엔진 + 동시성 제어 | client_credentials 로 token 발급 후 주문 API 호출 |

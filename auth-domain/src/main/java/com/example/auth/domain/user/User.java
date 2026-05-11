@@ -15,7 +15,7 @@ import java.util.Objects;
  * 절대 들어오지 않습니다 — application 의 PasswordHasher port 에서 해시한 결과를 받습니다.
  *
  * <p>email 은 PII 이므로 toString / log 호출 시 {@link EmailMasker} 로 가려야 합니다.
- * 이 record 는 일부러 toString 을 override 해서 평문 노출을 막습니다.
+ * 본 클래스는 toString 을 명시적으로 override 해서 평문이 새지 않도록 막습니다.
  */
 public final class User {
 
