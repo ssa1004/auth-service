@@ -1,7 +1,7 @@
 // 루트 빌드 — 공통 conventions. 각 모듈이 상속받는 공유 설정.
 plugins {
     java
-    id("org.springframework.boot") version "3.4.1" apply false
+    id("org.springframework.boot") version "3.4.13" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
 }
 
@@ -26,12 +26,12 @@ subprojects {
 
     the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
         imports {
-            mavenBom("org.springframework.boot:spring-boot-dependencies:3.4.1")
-            mavenBom("org.springframework.security:spring-security-bom:6.4.2")
+            mavenBom("org.springframework.boot:spring-boot-dependencies:3.4.13")
+            mavenBom("org.springframework.security:spring-security-bom:6.4.13")
         }
         // Spring Authorization Server 1.4.x 가 Spring Boot 3.4 / Security 6.4 호환.
         dependencies {
-            dependency("org.springframework.security:spring-security-oauth2-authorization-server:1.4.1")
+            dependency("org.springframework.security:spring-security-oauth2-authorization-server:1.4.8")
             dependency("dev.samstevens.totp:totp:1.7.1")
             dependency("com.bucket4j:bucket4j_jdk17-core:8.14.0")
             dependency("com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
