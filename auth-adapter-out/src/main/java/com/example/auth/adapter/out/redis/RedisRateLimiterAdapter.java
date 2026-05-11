@@ -5,7 +5,7 @@ import com.example.auth.application.security.AuthProperties;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
-import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
+import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
 import io.lettuce.core.RedisClient;
 import jakarta.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
@@ -32,8 +32,8 @@ public class RedisRateLimiterAdapter implements RateLimiter {
             @Value("${spring.data.redis.url:redis://localhost:6379}") String redisUrl,
             AuthProperties properties) {
         this.redisClient = RedisClient.create(redisUrl);
-        this.proxyManager = LettuceBasedProxyManager.builderFor(redisClient)
-                .withExpirationStrategy(ExpirationAfterWriteStrategy
+        this.proxyManager = Bucket4jLettuce.casBasedBuilder(redisClient)
+                .expirationAfterWrite(ExpirationAfterWriteStrategy
                         .basedOnTimeForRefillingBucketUpToMax(properties.loginRateWindow().multipliedBy(2)))
                 .build();
         Duration window = properties.loginRateWindow();
