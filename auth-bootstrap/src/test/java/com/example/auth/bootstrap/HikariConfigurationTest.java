@@ -8,9 +8,9 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
  * HikariCP 운영 튜닝 (ADR-0009) 이 application.yml 에서 정상 binding 되는지 확인.
@@ -31,7 +31,7 @@ import org.springframework.test.context.TestPropertySource;
 })
 class HikariConfigurationTest {
 
-    @MockBean
+    @MockitoBean
     RateLimiter rateLimiter;
 
     @Autowired
