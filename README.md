@@ -1,5 +1,8 @@
 # auth-service
 
+[![CI](https://github.com/ssa1004/auth-service/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssa1004/auth-service/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 OAuth2 / OIDC IdP. 다른 internal service 들이 JWT 를 검증하는 consumer 라면 이 서비스는
 JWT 를 발행하는 issuer 입니다. JWT 발행, JWK rotation, refresh token rotation, RBAC,
 multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
