@@ -1,9 +1,11 @@
 package com.example.auth.application.service;
 
 import com.example.auth.application.exception.InvalidCredentialsException;
+import com.example.auth.application.exception.RateLimitedException;
 import com.example.auth.application.exception.RefreshReuseDetectedException;
 import com.example.auth.application.port.in.AuditLoginAttemptsUseCase;
 import com.example.auth.application.port.in.RefreshTokenUseCase;
+import com.example.auth.application.port.out.RateLimiter;
 import com.example.auth.application.port.out.RefreshTokenRepository;
 import com.example.auth.application.port.out.TenantRepository;
 import com.example.auth.application.port.out.UserRepository;
@@ -42,6 +44,7 @@ public class RefreshTokenService implements RefreshTokenUseCase {
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final SessionIssuer sessionIssuer;
+    private final RateLimiter rateLimiter;
     private final AuditLoginAttemptsUseCase auditUseCase;
     private final AuthProperties authProperties;
     private final Clock clock;
@@ -54,6 +57,16 @@ public class RefreshTokenService implements RefreshTokenUseCase {
     @Override
     @Transactional(noRollbackFor = RefreshReuseDetectedException.class)
     public AuthTokens refresh(Command cmd) {
+        // OWASP API4 — refresh 는 인증 없이 호출되므로 IP 별 token bucket 으로
+        // brute-force 토큰 추측 / DoS 시도를 차단. 정상 client 의 rotation 간격은 분 단위라
+        // login 과 같은 bucket 설정 (10 req/min) 안에 충분히 들어옵니다. ip 가 null 인 단위
+        // 테스트 경로는 우회 — e2e / 운영은 ClientIpResolver 가 항상 채움.
+        if (cmd.ipAddress() != null) {
+            String rateKey = "refresh:" + cmd.ipAddress();
+            if (!rateLimiter.tryConsume(rateKey)) {
+                throw new RateLimitedException();
+            }
+        }
         String hash = TokenHasher.sha256(cmd.refreshTokenPlain());
         RefreshToken existing = refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(InvalidCredentialsException::new);
