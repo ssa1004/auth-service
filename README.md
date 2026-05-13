@@ -209,7 +209,7 @@ introspect — `/oauth2/introspect`, revoke — `/oauth2/revoke`). 프로필 REA
 | [search-service](https://github.com/ssa1004/search-service) | 검색 색인 + 질의 (OpenSearch) | client_credentials 로 색인 갱신 / 질의 |
 | [notification-hub](https://github.com/ssa1004/notification-hub) | 알림 fan-out (mail / push / slack) | client_credentials 로 알림 발송 trigger |
 | [security-log-search](https://github.com/ssa1004/security-log-search) | 감사 로그 / 보안 이벤트 검색 | 본 레포의 audit log 를 SIEM outbox 로 수신 |
-| [mini-shop-observability](https://github.com/ssa1004/mini-shop-observability) | MSA + observability 플레이그라운드 | 모든 레포 metric / trace / log 의 통합 대시보드 |
+| [commerce-ops](https://github.com/ssa1004/commerce-ops) | MSA + observability 플레이그라운드 | 모든 레포 metric / trace / log 의 통합 대시보드 |
 
 ### 발급 → 검증 흐름
 
