@@ -59,7 +59,7 @@ class RefreshTokenServiceTest {
         loginService = new LoginService(
                 users, tenants, hasher, allowLimiter, challenges, sessionIssuer, auditService, props);
         refreshService = new RefreshTokenService(
-                refresh, users, tenants, sessionIssuer, auditService, props, clock);
+                refresh, users, tenants, sessionIssuer, allowLimiter, auditService, props, clock);
 
         tenant = tenants.save(Tenant.create("acme", "ACME", clock.instant()));
         User alice = User.register(tenant.id(), "alice@example.com",
@@ -117,7 +117,7 @@ class RefreshTokenServiceTest {
         // 시계를 미래로 보내는 별도 service 인스턴스
         Clock future = Clock.fixed(clock.instant().plus(Duration.ofDays(31)), ZoneOffset.UTC);
         RefreshTokenService futureService = new RefreshTokenService(
-                refresh, users, tenants, sessionIssuer, auditService, props, future);
+                refresh, users, tenants, sessionIssuer, allowLimiter, auditService, props, future);
 
         assertThatThrownBy(() -> futureService.refresh(new RefreshTokenUseCase.Command(
                 initialTokens.refreshToken(), "1.2.3.4", "ua")))
@@ -168,10 +168,40 @@ class RefreshTokenServiceTest {
         // grace 5초 + 1초 = 6초 진행한 별도 인스턴스
         Clock laterClock = Clock.fixed(clock.instant().plus(Duration.ofSeconds(6)), ZoneOffset.UTC);
         RefreshTokenService laterService = new RefreshTokenService(
-                refresh, users, tenants, sessionIssuer, auditService, props, laterClock);
+                refresh, users, tenants, sessionIssuer, allowLimiter, auditService, props, laterClock);
 
         assertThatThrownBy(() -> laterService.refresh(new RefreshTokenUseCase.Command(
                 initialTokens.refreshToken(), "1.2.3.4", "ua")))
                 .isInstanceOf(RefreshReuseDetectedException.class);
+    }
+
+    /**
+     * OWASP API4 — refresh 도 인증 없이 호출되므로 IP 별 rate limit 가 필요.
+     * brute-force / DoS 시도를 차단.
+     */
+    @Test
+    void IP_있을_때_rate_limit_초과_시_RateLimited_예외() {
+        var deny = new InMemoryFakes.FixedDenyRateLimiter();
+        var blocked = new RefreshTokenService(
+                refresh, users, tenants, sessionIssuer, deny, auditService, props, clock);
+
+        assertThatThrownBy(() -> blocked.refresh(new RefreshTokenUseCase.Command(
+                        initialTokens.refreshToken(), "203.0.113.99", "ua")))
+                .isInstanceOf(com.example.auth.application.exception.RateLimitedException.class);
+
+        // 원본 token 은 ACTIVE 유지 — rate limit 단계는 token 상태에 영향 X
+        assertThat(refresh.all()).anyMatch(t -> t.status() == RefreshTokenStatus.ACTIVE);
+    }
+
+    @Test
+    void IP_가_null_이면_refresh_rate_limit_경로를_건너뛴다() {
+        // 단위 테스트 호환성 — 기존 ipAddress=null 호출이 깨지지 않아야 함.
+        var deny = new InMemoryFakes.FixedDenyRateLimiter();
+        var anywhere = new RefreshTokenService(
+                refresh, users, tenants, sessionIssuer, deny, auditService, props, clock);
+
+        AuthTokens rotated = anywhere.refresh(new RefreshTokenUseCase.Command(
+                initialTokens.refreshToken(), null, "ua"));
+        assertThat(rotated.refreshToken()).isNotNull();
     }
 }

@@ -1,10 +1,12 @@
 package com.example.auth.application.service;
 
+import com.example.auth.application.exception.RateLimitedException;
 import com.example.auth.application.exception.TenantNotFoundException;
 import com.example.auth.application.exception.UserAlreadyExistsException;
 import com.example.auth.application.port.in.AuditLoginAttemptsUseCase;
 import com.example.auth.application.port.in.RegisterUserUseCase;
 import com.example.auth.application.port.out.PasswordHasher;
+import com.example.auth.application.port.out.RateLimiter;
 import com.example.auth.application.port.out.TenantRepository;
 import com.example.auth.application.port.out.UserRepository;
 import com.example.auth.application.port.out.VerificationMailSender;
@@ -29,6 +31,7 @@ public class RegisterUserService implements RegisterUserUseCase {
     private final TenantRepository tenantRepository;
     private final PasswordHasher passwordHasher;
     private final VerificationMailSender mailSender;
+    private final RateLimiter rateLimiter;
     private final AuditLoginAttemptsUseCase auditUseCase;
     private final Clock clock;
 
@@ -39,6 +42,15 @@ public class RegisterUserService implements RegisterUserUseCase {
                 .orElseThrow(() -> new TenantNotFoundException(cmd.tenantSlug()));
         if (!tenant.isActive()) {
             throw new TenantNotFoundException(cmd.tenantSlug());
+        }
+        // OWASP API4 / API6 — register 는 인증 없이 호출되므로 IP 별 token bucket 으로
+        // 자동 가입 / 계정 enumeration (409 응답을 oracle 로 활용) 을 차단합니다. login 과
+        // 같은 bucket 설정 (10 req/min) 을 별도 키로 사용 — 사용자 합법 가입 흐름은 영향 X.
+        if (cmd.ipAddress() != null) {
+            String rateKey = "register:" + tenant.slug() + ":" + cmd.ipAddress();
+            if (!rateLimiter.tryConsume(rateKey)) {
+                throw new RateLimitedException();
+            }
         }
         String email = cmd.email().toLowerCase().trim();
         if (userRepository.existsByEmail(tenant.id(), email)) {
