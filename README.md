@@ -251,6 +251,28 @@ docker compose -f infrastructure/docker/docker-compose.integration.yml up -d --b
 서명 / `exp` / `iss` 를 in-process 검증합니다. 외부 의존은 컨테이너 안에서 닫혀 있고 실 외부
 API 호출은 없습니다.
 
+## Load test
+
+[k6](https://k6.io/) (JS 시나리오 부하 도구) 로 OAuth2 endpoint 부하 / refresh rotation
+invariant 를 검증합니다. 자세한 시나리오 / 임계 / 측정 항목은
+[`load/README.md`](load/README.md).
+
+| 시나리오 | endpoint | 패턴 | 임계 |
+| --- | --- | --- | --- |
+| token-issue | `POST /oauth2/token` (client_credentials) | constant 500 req/s | p95 < 100ms |
+| token-introspect | `POST /oauth2/introspect` (RFC 7662) | constant 1000 req/s | p95 < 20ms (Redis 캐시 적중) |
+| jwks-fetch | `GET /oauth2/jwks` | constant 2000 req/s | p95 < 10ms (정적 + 캐싱) |
+| login-refresh | `POST /auth/login` → `/auth/refresh` | ramping 0 → 100 VU | login/refresh p95 < 150ms, err < 1% |
+| refresh-reuse-detection | refresh 의도적 reuse | 1 VU N iterations | 두 번째 사용 → 401 + family revoke 100% |
+
+```bash
+brew install k6
+# 단일 실행
+k6 run load/k6/scenarios/token-issue.js
+# 일괄 실행 (사용자 사전 register 포함)
+./scripts/run-load.sh
+```
+
 ## ADR
 
 18개 ADR 로 핵심 결정을 정리했습니다. 각 ADR 는 결정의 배경 / 선택 / 근거 / 장단점을
