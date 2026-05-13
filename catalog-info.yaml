@@ -4,7 +4,7 @@
 #
 # 포트폴리오 9개 레포 (auth-service, security-log-search, notification-hub, search-service,
 # billing-platform, resell-orderbook, gpu-job-orchestrator, realtime-feed-service,
-# mini-shop-observability) 가 하나의 system 으로 묶인다는 것을 보여주기 위해
+# commerce-ops) 가 하나의 system 으로 묶인다는 것을 보여주기 위해
 # system 정의는 이 파일 (auth-service) 에서 한다. 나머지 레포는 system 을 참조만 한다.
 
 apiVersion: backstage.io/v1alpha1
@@ -19,7 +19,7 @@ metadata:
     - notification-hub 가 도메인 이벤트 구독 → 알림 fan-out → alerts.fired 발행
     - realtime-feed-service 가 trade 이벤트를 WebSocket/SSE 로 스트리밍
     - security-log-search 가 alerts.fired 등 보안 이벤트를 집계 / 탐지
-    - mini-shop-observability 가 OpenTelemetry / Prometheus / Grafana / Loki / Tempo
+    - commerce-ops 가 OpenTelemetry / Prometheus / Grafana / Loki / Tempo
       관측성 stack + 자체 Spring Boot starter 4종 제공
   links:
     - url: https://github.com/ssa1004
