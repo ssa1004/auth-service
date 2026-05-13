@@ -1,0 +1,200 @@
+---
+# Backstage Software Catalog 정의 — 포트폴리오 system + auth-service component + OAuth2 API들.
+# spec: https://backstage.io/docs/features/software-catalog/descriptor-format
+#
+# 포트폴리오 9개 레포 (auth-service, security-log-search, notification-hub, search-service,
+# billing-platform, resell-orderbook, gpu-job-orchestrator, realtime-feed-service,
+# mini-shop-observability) 가 하나의 system 으로 묶인다는 것을 보여주기 위해
+# system 정의는 이 파일 (auth-service) 에서 한다. 나머지 레포는 system 을 참조만 한다.
+
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: ssa1004-portfolio
+  description: |
+    ssa1004 백엔드 + DevOps 포트폴리오 system. 9개 레포가 한 system 으로 연동:
+    - auth-service (OAuth2/OIDC IdP) 가 JWT 발급
+    - 도메인 서비스 (resell-orderbook / billing-platform / gpu-job-orchestrator) 가
+      Outbox + Kafka 로 도메인 이벤트 발행
+    - notification-hub 가 도메인 이벤트 구독 → 알림 fan-out → alerts.fired 발행
+    - realtime-feed-service 가 trade 이벤트를 WebSocket/SSE 로 스트리밍
+    - security-log-search 가 alerts.fired 등 보안 이벤트를 집계 / 탐지
+    - mini-shop-observability 가 OpenTelemetry / Prometheus / Grafana / Loki / Tempo
+      관측성 stack + 자체 Spring Boot starter 4종 제공
+  links:
+    - url: https://github.com/ssa1004
+      title: GitHub Profile
+spec:
+  owner: user:ssa1004
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: auth-service
+  description: "OAuth2 / OIDC IdP — Spring Authorization Server 1.4, JWK rotation, refresh reuse detection + grace, OPA Rego (ABAC), RFC 7662/7009"
+  annotations:
+    github.com/project-slug: ssa1004/auth-service
+    backstage.io/source-location: url:https://github.com/ssa1004/auth-service
+  tags:
+    - oauth2
+    - oidc
+    - spring-authorization-server
+    - jwt
+    - opa
+    - abac
+    - java-21
+  links:
+    - url: https://github.com/ssa1004/auth-service
+      title: GitHub Repository
+    - url: https://github.com/ssa1004/auth-service/blob/main/README.md
+      title: README
+    - url: https://github.com/ssa1004/auth-service/tree/main/docs/adr
+      title: ADRs
+spec:
+  type: service
+  lifecycle: experimental
+  owner: user:ssa1004
+  system: ssa1004-portfolio
+  providesApis:
+    - oauth2-token
+    - oauth2-introspection
+    - oauth2-revocation
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: oauth2-token
+  description: "OAuth2 / OIDC 토큰 발급 endpoint — Authorization Code + PKCE, Refresh Token (reuse detection + grace)"
+  annotations:
+    github.com/project-slug: ssa1004/auth-service
+  links:
+    - url: https://github.com/ssa1004/auth-service/tree/main/docs/adr
+      title: 관련 ADR
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: user:ssa1004
+  system: ssa1004-portfolio
+  definition: |
+    openapi: 3.0.3
+    info:
+      title: OAuth2 / OIDC Token Endpoint
+      version: 1.0.0
+      description: |
+        Spring Authorization Server 1.4 기반 토큰 endpoint.
+        grant_type: authorization_code (PKCE 필수), refresh_token, client_credentials.
+    paths:
+      /oauth2/token:
+        post:
+          summary: 토큰 발급
+          requestBody:
+            required: true
+            content:
+              application/x-www-form-urlencoded:
+                schema:
+                  type: object
+                  properties:
+                    grant_type: { type: string }
+                    code: { type: string }
+                    refresh_token: { type: string }
+                    code_verifier: { type: string }
+                    client_id: { type: string }
+                    client_secret: { type: string }
+          responses:
+            "200":
+              description: 토큰 발급 성공
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      access_token: { type: string }
+                      token_type: { type: string }
+                      expires_in: { type: integer }
+                      refresh_token: { type: string }
+                      id_token: { type: string }
+            "400": { description: invalid_request / invalid_grant 등 }
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: oauth2-introspection
+  description: "RFC 7662 OAuth2 Token Introspection endpoint"
+  annotations:
+    github.com/project-slug: ssa1004/auth-service
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: user:ssa1004
+  system: ssa1004-portfolio
+  definition: |
+    openapi: 3.0.3
+    info:
+      title: OAuth2 Token Introspection (RFC 7662)
+      version: 1.0.0
+    paths:
+      /oauth2/introspect:
+        post:
+          summary: 토큰 introspection
+          requestBody:
+            required: true
+            content:
+              application/x-www-form-urlencoded:
+                schema:
+                  type: object
+                  required: [token]
+                  properties:
+                    token: { type: string }
+                    token_type_hint: { type: string, enum: [access_token, refresh_token] }
+          responses:
+            "200":
+              description: introspection 결과
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      active: { type: boolean }
+                      scope: { type: string }
+                      client_id: { type: string }
+                      sub: { type: string }
+                      exp: { type: integer }
+                      iat: { type: integer }
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: oauth2-revocation
+  description: "RFC 7009 OAuth2 Token Revocation endpoint"
+  annotations:
+    github.com/project-slug: ssa1004/auth-service
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: user:ssa1004
+  system: ssa1004-portfolio
+  definition: |
+    openapi: 3.0.3
+    info:
+      title: OAuth2 Token Revocation (RFC 7009)
+      version: 1.0.0
+    paths:
+      /oauth2/revoke:
+        post:
+          summary: 토큰 폐기
+          requestBody:
+            required: true
+            content:
+              application/x-www-form-urlencoded:
+                schema:
+                  type: object
+                  required: [token]
+                  properties:
+                    token: { type: string }
+                    token_type_hint: { type: string, enum: [access_token, refresh_token] }
+          responses:
+            "200": { description: 폐기 완료 (idempotent) }
