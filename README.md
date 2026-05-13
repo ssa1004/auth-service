@@ -203,7 +203,7 @@ introspect — `/oauth2/introspect`, revoke — `/oauth2/revoke`). 프로필 REA
 | 레포 | 한 줄 소개 | 본 레포와의 관계 |
 | --- | --- | --- |
 | [auth-service](https://github.com/ssa1004/auth-service) | OAuth2 / OIDC IdP — JWT 발행 / JWK rotation / 2FA / introspect / revoke | 자신 (issuer) |
-| [resell-orderbook](https://github.com/ssa1004/resell-orderbook) | 주문 매칭 엔진 + 동시성 제어 | client_credentials 로 token 발급 후 주문 API 호출 |
+| [bid-ask-marketplace](https://github.com/ssa1004/bid-ask-marketplace) | 주문 매칭 엔진 + 동시성 제어 | client_credentials 로 token 발급 후 주문 API 호출 |
 | [billing-platform](https://github.com/ssa1004/billing-platform) | 사용량 집계 / 청구서 / 결제 게이트웨이 | client_credentials 로 token 발급 후 결제 API 호출 |
 | [gpu-job-orchestrator](https://github.com/ssa1004/gpu-job-orchestrator) | GPU job 큐 / 스케줄러 | client_credentials 로 token 발급 후 job submit |
 | [search-service](https://github.com/ssa1004/search-service) | 검색 색인 + 질의 (OpenSearch) | client_credentials 로 색인 갱신 / 질의 |
@@ -216,7 +216,7 @@ introspect — `/oauth2/introspect`, revoke — `/oauth2/revoke`). 프로필 REA
 ```mermaid
 sequenceDiagram
     autonumber
-    participant C as Caller (resell-orderbook 등)
+    participant C as Caller (bid-ask-marketplace 등)
     participant A as auth-service (IdP)
     participant R as Resource Server (해당 도메인)
 

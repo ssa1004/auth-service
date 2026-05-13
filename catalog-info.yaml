@@ -3,7 +3,7 @@
 # spec: https://backstage.io/docs/features/software-catalog/descriptor-format
 #
 # 포트폴리오 9개 레포 (auth-service, security-log-search, notification-hub, search-service,
-# billing-platform, resell-orderbook, gpu-job-orchestrator, realtime-feed-service,
+# billing-platform, bid-ask-marketplace, gpu-job-orchestrator, realtime-feed-service,
 # commerce-ops) 가 하나의 system 으로 묶인다는 것을 보여주기 위해
 # system 정의는 이 파일 (auth-service) 에서 한다. 나머지 레포는 system 을 참조만 한다.
 
@@ -14,7 +14,7 @@ metadata:
   description: |
     ssa1004 백엔드 + DevOps 포트폴리오 system. 9개 레포가 한 system 으로 연동:
     - auth-service (OAuth2/OIDC IdP) 가 JWT 발급
-    - 도메인 서비스 (resell-orderbook / billing-platform / gpu-job-orchestrator) 가
+    - 도메인 서비스 (bid-ask-marketplace / billing-platform / gpu-job-orchestrator) 가
       Outbox + Kafka 로 도메인 이벤트 발행
     - notification-hub 가 도메인 이벤트 구독 → 알림 fan-out → alerts.fired 발행
     - realtime-feed-service 가 trade 이벤트를 WebSocket/SSE 로 스트리밍
