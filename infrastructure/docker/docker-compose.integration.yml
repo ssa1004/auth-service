@@ -70,3 +70,29 @@ services:
       AUTH_JWT_ISSUER: http://auth:8080
     ports:
       - "9090:8080"
+
+  # k6 부하 시나리오 실행기 (선택). docker network 안에서 auth 와 직접 통신하므로 외부
+  # 포트 노출은 불필요. load/README.md / scripts/run-load.sh 참고.
+  #
+  # 실행 예:
+  #   docker compose -f infrastructure/docker/docker-compose.integration.yml \
+  #     run --rm k6 run /scenarios/token-issue.js
+  k6:
+    image: grafana/k6:0.50.0
+    profiles: ["load"]   # 기본 up 에서는 제외 — 명시적 실행만.
+    depends_on:
+      auth:
+        condition: service_started
+    environment:
+      BASE_URL: http://auth:8080
+      JWKS_URL: http://auth:8080/oauth2/jwks
+      CLIENT_ID: internal-service
+      CLIENT_SECRET: internal-service-secret-change-me
+      TENANT_SLUG: acme
+      USER_EMAIL: alice@example.com
+      USER_PASSWORD: longenoughpw1234
+    volumes:
+      # 시나리오는 `../lib/...` 를 import 하므로 디렉토리 트리 그대로 마운트.
+      - ../../load/k6:/k6:ro
+    working_dir: /k6
+    # k6 entrypoint 는 이미 `k6` — `run --rm k6 run /k6/scenarios/<file>.js` 형태로 호출.
