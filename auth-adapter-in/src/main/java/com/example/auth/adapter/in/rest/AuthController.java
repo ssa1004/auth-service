@@ -46,12 +46,15 @@ public class AuthController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "생성 성공 — userId 반환"),
             @ApiResponse(responseCode = "400", description = "validation 실패 (email 형식 / password 길이 12-128 등)"),
-            @ApiResponse(responseCode = "409", description = "이미 등록된 email")
+            @ApiResponse(responseCode = "409", description = "이미 등록된 email"),
+            @ApiResponse(responseCode = "429", description = "rate limit (login-rate-burst 초과 — bot 자동 가입 차단)")
     })
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest req) {
+    public ResponseEntity<RegisterResponse> register(
+            @Valid @RequestBody RegisterRequest req,
+            HttpServletRequest http) {
         UserId id = registerUserUseCase.register(new RegisterUserUseCase.Command(
-                req.tenantSlug(), req.email(), req.password()));
+                req.tenantSlug(), req.email(), req.password(), clientIpResolver.resolve(http)));
         return ResponseEntity.status(HttpStatus.CREATED).body(new RegisterResponse(id.asString()));
     }
 
@@ -117,7 +120,8 @@ public class AuthController {
                     """)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "성공 — 새 access + 새 refresh 발급"),
-            @ApiResponse(responseCode = "401", description = "유효하지 않거나 이미 회전된 token (reuse 감지 시 사용자의 모든 세션 revoke)")
+            @ApiResponse(responseCode = "401", description = "유효하지 않거나 이미 회전된 token (reuse 감지 시 사용자의 모든 세션 revoke)"),
+            @ApiResponse(responseCode = "429", description = "rate limit (IP 당 login-rate-burst 초과 — brute-force / DoS 차단)")
     })
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refresh(
