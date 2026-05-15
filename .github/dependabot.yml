@@ -1,0 +1,42 @@
+version: 2
+updates:
+  # Gradle 의존성 — Spring Boot / Security / Authorization Server / bucket4j 등.
+  # 멀티모듈이지만 버전 관리가 루트 build.gradle.kts 한 곳에 모여 있어 directory: "/" 로 충분.
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - gradle
+    reviewers:
+      - ssa1004
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # Spring 생태계는 BOM 으로 함께 올라가야 하므로 한 PR 로 묶음.
+      spring:
+        patterns:
+          - "org.springframework*"
+          - "io.spring.dependency-management"
+
+  # GitHub Actions — ci.yml / codeql.yml 의 actions 핀 버전.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    reviewers:
+      - ssa1004
+    commit-message:
+      prefix: "ci"
