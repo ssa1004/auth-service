@@ -148,7 +148,7 @@ introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가
 
 테스트 카운트:
 - domain: 26
-- application: 53
+- application: 58
 - adapter-in: 13
 - adapter-out: 46 (OPA Rego ↔ embedded 동등성 21 케이스 포함)
 - bootstrap: 8
