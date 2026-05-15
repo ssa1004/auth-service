@@ -96,7 +96,8 @@ public class AuthController {
             description = "/login 응답의 mfaToken 과 6자리 TOTP 코드로 본 인증을 완료. challenge 토큰은 1회 consume.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "성공 — access + refresh 발급"),
-            @ApiResponse(responseCode = "400", description = "코드 불일치 / 만료된 challenge / 이미 consume 된 challenge")
+            @ApiResponse(responseCode = "400", description = "코드 불일치 / 만료된 challenge / 이미 consume 된 challenge"),
+            @ApiResponse(responseCode = "429", description = "rate limit (IP 당 login-rate-burst 초과 — TOTP 추측 brute-force 차단)")
     })
     @PostMapping("/verify-mfa")
     public ResponseEntity<TokenResponse> verifyMfa(

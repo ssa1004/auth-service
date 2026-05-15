@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.auth.application.exception.InvalidCredentialsException;
 import com.example.auth.application.exception.MfaRequiredException;
+import com.example.auth.application.exception.RateLimitedException;
 import com.example.auth.application.port.in.LoginUseCase;
 import com.example.auth.application.port.in.VerifyMfaUseCase;
 import com.example.auth.application.security.AuthProperties;
@@ -63,7 +64,8 @@ class VerifyMfaServiceTest {
                 users, tenants, hasher, new InMemoryFakes.AlwaysAllowRateLimiter(),
                 challenges, sessionIssuer, auditService, props);
         verifyService = new VerifyMfaService(
-                challenges, users, tenants, mfaSecrets, cipher, totp, sessionIssuer, auditService);
+                challenges, users, tenants, mfaSecrets, cipher, totp,
+                new InMemoryFakes.AlwaysAllowRateLimiter(), sessionIssuer, auditService);
 
         tenant = tenants.save(Tenant.create("acme", "ACME", clock.instant()));
         User alice = User.register(tenant.id(), "alice@example.com",
@@ -118,5 +120,21 @@ class VerifyMfaServiceTest {
         assertThatThrownBy(() -> verifyService.verify(new VerifyMfaUseCase.Command(
                 "fake-mfa-challenge", "123456", "1.2.3.4", "ua", "macbook")))
                 .isInstanceOf(InvalidCredentialsException.class);
+    }
+
+    @Test
+    void IP_있을_때_rate_limit_초과_시_RateLimited_예외_challenge_는_소비되지_않음() {
+        var blocked = new VerifyMfaService(
+                challenges, users, tenants, mfaSecrets, cipher, totp,
+                new InMemoryFakes.FixedDenyRateLimiter(), sessionIssuer, auditService);
+
+        assertThatThrownBy(() -> blocked.verify(new VerifyMfaUseCase.Command(
+                challengeToken, "123456", "1.2.3.4", "ua", "macbook")))
+                .isInstanceOf(RateLimitedException.class);
+        // rate limit 은 challenge consume 보다 먼저 — 차단돼도 challenge 는 살아있어
+        // 정상 한도 안에서는 같은 mfaToken 으로 인증을 이어갈 수 있음.
+        var tokens = verifyService.verify(new VerifyMfaUseCase.Command(
+                challengeToken, "123456", "1.2.3.4", "ua", "macbook"));
+        assertThat(tokens.accessToken()).startsWith("stub-jwt.");
     }
 }
