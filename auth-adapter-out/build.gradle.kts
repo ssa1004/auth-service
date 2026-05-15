@@ -23,7 +23,7 @@ dependencies {
 
     // JWT 서명 — Spring Authorization Server 가 동일 라이브러리를 transitive 로 가져오지만
     // adapter-out 에서 직접 import 하므로 명시적 선언이 필요합니다.
-    implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+    implementation("com.nimbusds:nimbus-jose-jwt:10.9")
 
     // RFC 7662 introspection 시 자체 발행 access JWT 를 디코드 — JwtDecoder API 사용 (ADR-0017).
     implementation("org.springframework.security:spring-security-oauth2-jose")
