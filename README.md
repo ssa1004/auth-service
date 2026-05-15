@@ -163,8 +163,10 @@ introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가
   `drop ALL caps`.
 - `helm/auth-service/` — 같은 manifest 의 Helm chart 버전. dev / staging / prod 환경 분기를
   values 로 처리 (자세한 설명은 [Deployment](#deployment) 절).
-- `.github/workflows/ci.yml` — `workflow_dispatch` only. `./gradlew check` → docker buildx
-  (no push).
+- `.github/workflows/ci.yml` — `workflow_dispatch` only. gradle wrapper 검증 →
+  `./gradlew check` → docker buildx (no push) → helm lint.
+- `.github/workflows/codeql.yml` — CodeQL Java SAST. push / PR + 주 1회 정기 스캔.
+- `.github/dependabot.yml` — gradle / github-actions 의존성 주 1회 점검.
 
 ## Deployment
 
