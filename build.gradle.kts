@@ -33,8 +33,8 @@ subprojects {
         dependencies {
             dependency("org.springframework.security:spring-security-oauth2-authorization-server:1.4.8")
             dependency("dev.samstevens.totp:totp:1.7.1")
-            dependency("com.bucket4j:bucket4j_jdk17-core:8.14.0")
-            dependency("com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
+            dependency("com.bucket4j:bucket4j_jdk17-core:8.18.0")
+            dependency("com.bucket4j:bucket4j_jdk17-lettuce:8.18.0")
         }
     }
 
