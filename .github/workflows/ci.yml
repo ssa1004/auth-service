@@ -4,8 +4,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  # gradle-wrapper.jar 가 공식 배포 체크섬과 일치하는지 검증 — 변조된 wrapper 가
+  # 빌드 파이프라인에서 임의 코드를 실행하는 공급망 공격을 차단.
+  gradle-wrapper-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gradle/actions/wrapper-validation@v4
+
   test:
     runs-on: ubuntu-latest
+    needs: gradle-wrapper-validation
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
