@@ -21,6 +21,16 @@ USER_EMAIL="${USER_EMAIL:-alice@example.com}"
 USER_PASSWORD="${USER_PASSWORD:-longenoughpw1234}"
 WAIT_SECONDS="${WAIT_SECONDS:-90}"
 
+# k6 → Prometheus remote-write (optional). commerce-ops Prometheus 가 떠 있을 때
+# `K6_PROMETHEUS_RW_SERVER_URL=http://localhost:9090/api/v1/write` 를 export 하면
+# 각 시나리오 결과가 `service=auth-service` tag 와 함께 Prom 으로 흐른다.
+# 비어 있으면 기존처럼 console 만 (default disabled).
+K6_PROMETHEUS_RW_SERVER_URL="${K6_PROMETHEUS_RW_SERVER_URL:-}"
+K6_PROMETHEUS_RW_TREND_STATS="${K6_PROMETHEUS_RW_TREND_STATS:-p(95),p(99),min,max,avg}"
+K6_PROMETHEUS_RW_PUSH_INTERVAL="${K6_PROMETHEUS_RW_PUSH_INTERVAL:-5s}"
+SERVICE_TAG="auth-service"
+export K6_PROMETHEUS_RW_SERVER_URL K6_PROMETHEUS_RW_TREND_STATS K6_PROMETHEUS_RW_PUSH_INTERVAL
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 K6_DIR="$REPO_ROOT/load/k6"
@@ -63,7 +73,15 @@ ensure_user() {
 run_scenario() {
     local name="$1"
     step "k6 run $name"
-    k6 run "$K6_DIR/scenarios/$name"
+    # name 은 "token-issue.js" 형태 — Prometheus tag 에는 확장자 제거.
+    local scenario_tag="${name%.js}"
+    local rw_opts=()
+    if [[ -n "$K6_PROMETHEUS_RW_SERVER_URL" ]]; then
+        rw_opts=(-o "experimental-prometheus-rw" \
+                 --tag "service=${SERVICE_TAG}" \
+                 --tag "scenario=${scenario_tag}")
+    fi
+    k6 run "${rw_opts[@]}" "$K6_DIR/scenarios/$name"
 }
 
 step "1) auth-service 헬스 대기"
