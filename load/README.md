@@ -98,10 +98,29 @@ docker compose -f infrastructure/docker/docker-compose.integration.yml \
 - k6 로그 / artifact 에 평문 token 이 들어가지 않도록 `--summary-export` 만 보관하고
   본문은 따로 떨어뜨립니다 ([AGENTS.md](../AGENTS.md) §7 보안).
 
+## Prometheus remote-write 연동 (commerce-ops 통합 대시보드)
+
+각 시나리오 결과를 `commerce-ops` 의 Prometheus 로 흘려서 한 Grafana 대시보드에서
+client load + auth-service actuator 를 같이 보고 싶을 때:
+
+```bash
+# commerce-ops 의 Prom 은 이미 remote-write receiver 가 켜져 있다
+docker compose -f /path/to/commerce-ops/infra/docker-compose.yml up -d prometheus grafana
+
+export K6_PROMETHEUS_RW_SERVER_URL=http://localhost:9090/api/v1/write
+./scripts/run-load.sh
+```
+
+`run-load.sh` 가 각 시나리오에 `service=auth-service` / `scenario=<name>` tag 를 자동
+부여한다. Grafana → **Portfolio Load (k6 + actuator)** 대시보드 (uid `portfolio-load`)
+에서 service 변수를 `auth-service` 로 선택하면 token_issue / introspect / login-refresh /
+refresh-reuse-detection 의 throughput / p95 / p99 / error rate 와 actuator 의 process
+CPU / JVM heap / HikariCP 가 같은 시간축에 plot 된다. 필요 k6 버전 **0.42+**
+(experimental-prometheus-rw output).
+
 ## 후속 작업
 
 - [ ] CI 의 nightly job 에 `scripts/run-load.sh` 통합
-- [ ] Prometheus remote-write (`--out experimental-prometheus-rw=...`) 로 시계열 누적
 - [ ] MFA 활성 사용자 시나리오 — `/verify-mfa` TOTP 부하
 - [ ] `/oauth2/revoke` 시나리오 — admin revoke + Redis 블록리스트 부하
 - [ ] JWK rotation 직후의 `jwks` 시나리오 (current + previous 둘 다 노출되는지)
