@@ -1,7 +1,13 @@
 // Inbound adapter — REST controllers (회원가입 / 로그인 / MFA / refresh / session 관리 / 운영 RBAC)
 // + Spring Authorization Server endpoints (/oauth2/token, /oauth2/jwks, /.well-known/openid-configuration).
+//
+// Kotlin 마이그레이션 — controller / DTO / security helper / exception handler 모두 Kotlin.
+// plugin.spring 이 @Controller / @Component / @ControllerAdvice 가 붙은 class 를 자동 open 처리해
+// CGLIB proxy 가 가능하게 한다.
 plugins {
     `java-library`
+    kotlin("jvm")
+    kotlin("plugin.spring")
 }
 
 dependencies {
@@ -25,6 +31,25 @@ dependencies {
     implementation("io.micrometer:micrometer-tracing")
     implementation("io.micrometer:micrometer-core")
 
+    // Kotlin null-safety 와 호환되는 Jackson module — Kotlin data class 의 non-null 필드를 인식해
+    // Instant / Enum / record 역직렬화가 정상 동작한다.
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
+    // Spring Data 가 Kotlin class 의 PreferredConstructorDiscoverer 를 호출할 때 reflect 필요.
+    runtimeOnly("org.jetbrains.kotlin:kotlin-reflect")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
+    // Mockito Kotlin helpers — any() / whenever / verify 의 Kotlin friendly DSL.
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    }
 }
