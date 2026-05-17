@@ -25,7 +25,7 @@ dependencies {
 
     // OpenAPI — Spring Boot 3.4 / Spring 6.2 와 ControllerAdviceBean signature 호환되는 2.7.0+ 필수.
     // 2.6.0 은 NoSuchMethodError 발생 (GenericResponseService 가 6.1 시그니처 호출).
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     // Tracing / Metrics
     implementation("io.micrometer:micrometer-tracing")
