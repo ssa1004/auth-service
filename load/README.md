@@ -96,7 +96,7 @@ docker compose -f infrastructure/docker/docker-compose.integration.yml \
 
 - `CLIENT_SECRET` / `USER_PASSWORD` 는 절대 commit 하지 않습니다. 기본값은 로컬 시드 한정.
 - k6 로그 / artifact 에 평문 token 이 들어가지 않도록 `--summary-export` 만 보관하고
-  본문은 따로 떨어뜨립니다 ([AGENTS.md](../AGENTS.md) §7 보안).
+  본문은 따로 떨어뜨립니다 ([CONTRIBUTING.md](../CONTRIBUTING.md) 의 보안 규칙 참고).
 
 ## Prometheus remote-write 연동 (commerce-ops 통합 대시보드)
 
