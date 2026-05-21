@@ -168,7 +168,8 @@ class RevokeTokenByAdminService(
             fun access(d: AccessTokenIntrospector.Decoded, ttl: Duration?): Outcome = Outcome(
                 "access",
                 if (d.tenantId != null) TenantId.of(d.tenantId) else null,
-                if (d.subject != null) UserId.of(d.subject) else null,
+                // Decoded.subject 는 non-null — JWT sub 는 항상 존재.
+                UserId.of(d.subject),
                 d.jwtId, null,
                 ttl?.toSeconds() ?: -1,
             )

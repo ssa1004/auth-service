@@ -42,10 +42,10 @@ class PolicyDecisionService(
         payload["action"] = request.action
         payload["allow"] = result.allow.toString()
         payload["reasons"] = result.reasons.joinToString(",")
-        if (request.resource != null) {
-            payload["resourceType"] = request.resource!!.type
-            if (request.resource!!.ownerUser != null) {
-                payload["resourceOwnerUserId"] = request.resource!!.ownerUser!!.asString()
+        request.resource?.let { resource ->
+            payload["resourceType"] = resource.type
+            resource.ownerUser?.let { ownerUser ->
+                payload["resourceOwnerUserId"] = ownerUser.asString()
             }
         }
         try {
