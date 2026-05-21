@@ -1,6 +1,6 @@
 name: CodeQL
 
-# Java SAST. push / PR 에서 코드가 바뀔 때, 그리고 주 1회 정기 스캔.
+# Java/Kotlin SAST. push / PR 에서 코드가 바뀔 때, 그리고 주 1회 정기 스캔.
 # 정기 스캔은 의존성 / 쿼리팩 업데이트로 새로 드러나는 패턴을 잡기 위함.
 on:
   push:
@@ -45,9 +45,10 @@ jobs:
           queries: security-and-quality
 
       # autobuild 대신 명시적 빌드 — 멀티모듈 Gradle 은 직접 호출이 더 안정적.
+      # production 코드는 Kotlin 이므로 compileKotlin 을 호출 (compileJava 는 NO-SOURCE).
       # 테스트는 ci.yml 이 담당하므로 여기서는 컴파일만.
       - name: Build
-        run: ./gradlew --no-daemon compileJava
+        run: ./gradlew --no-daemon compileKotlin compileJava
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
