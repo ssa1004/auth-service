@@ -197,7 +197,7 @@ threshold, OPA sidecar (ADR-0016), JWK 는 KMS / Vault (`secret.create=false` + 
 
 ## Portfolio Set 통합
 
-이 레포는 단독 IdP 가 아니라 8 레포 포트폴리오의 *issuer* 입니다. 다른 7 레포는 본 레포가
+이 레포는 단독 IdP 가 아니라 10 레포 포트폴리오의 *issuer* 입니다. 다른 9 레포는 본 레포가
 발급한 JWT 를 받아 resource server 로서 검증합니다 (JWK Set 공개 — `/oauth2/jwks`,
 introspect — `/oauth2/introspect`, revoke — `/oauth2/revoke`). 프로필 README:
 [ssa1004/ssa1004](https://github.com/ssa1004/ssa1004).
@@ -210,6 +210,8 @@ introspect — `/oauth2/introspect`, revoke — `/oauth2/revoke`). 프로필 REA
 | [gpu-job-orchestrator](https://github.com/ssa1004/gpu-job-orchestrator) | GPU job 큐 / 스케줄러 | client_credentials 로 token 발급 후 job submit |
 | [search-service](https://github.com/ssa1004/search-service) | 검색 색인 + 질의 (OpenSearch) | client_credentials 로 색인 갱신 / 질의 |
 | [notification-hub](https://github.com/ssa1004/notification-hub) | 알림 fan-out (mail / push / slack) | client_credentials 로 알림 발송 trigger |
+| [realtime-feed-service](https://github.com/ssa1004/realtime-feed-service) | trade 이벤트 WebSocket / SSE 스트리밍 | Bearer JWT 로 스트림 구독 인증 |
+| [graphql-gateway](https://github.com/ssa1004/graphql-gateway) | 도메인 API 를 묶는 GraphQL BFF | 전달받은 JWT 를 검증 후 하위 서비스로 전파 |
 | [security-log-search](https://github.com/ssa1004/security-log-search) | 감사 로그 / 보안 이벤트 검색 | 본 레포의 audit log 를 SIEM outbox 로 수신 |
 | [commerce-ops](https://github.com/ssa1004/commerce-ops) | MSA + observability 플레이그라운드 | 모든 레포 metric / trace / log 의 통합 대시보드 |
 
