@@ -26,7 +26,7 @@
 
 ```bash
 # 예: docker compose 로 의존 인프라 기동 후 spec 생성
-docker compose -f infrastructure/docker-compose.yml up -d postgres redis
+docker compose -f infrastructure/docker/docker-compose.yml up -d postgres redis
 ./gradlew :auth-bootstrap:generateOpenApiDocs
 ```
 

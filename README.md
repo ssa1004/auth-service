@@ -7,7 +7,7 @@ OAuth2 / OIDC IdP. 다른 internal service 들이 JWT 를 검증하는 consumer 
 JWT 를 발행하는 issuer 입니다. JWT 발행, JWK rotation, refresh token rotation, RBAC,
 multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
 
-- Spring Boot 3.4 / Java 21 / Spring Authorization Server 1.4
+- Kotlin / Spring Boot 3.4 / JVM 21 toolchain / Spring Authorization Server 1.4
 - Postgres + Flyway + JPA / Redis (refresh reuse 감지, rate limit, MFA challenge)
 - 헥사고날 (ports & adapters) + 모듈 6개
 - ADR 18개로 핵심 결정 정리 ([docs/adr](docs/adr)) — RBAC + ABAC (OPA), JWK rotation, Refresh
@@ -165,7 +165,7 @@ introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가
   values 로 처리 (자세한 설명은 [Deployment](#deployment) 절).
 - `.github/workflows/ci.yml` — `workflow_dispatch` only. gradle wrapper 검증 →
   `./gradlew check` → docker buildx (no push) → helm lint.
-- `.github/workflows/codeql.yml` — CodeQL Java SAST. push / PR + 주 1회 정기 스캔.
+- `.github/workflows/codeql.yml` — CodeQL Java/Kotlin SAST. push / PR + 주 1회 정기 스캔.
 - `.github/dependabot.yml` — gradle / github-actions 의존성 주 1회 점검.
 
 ## Deployment

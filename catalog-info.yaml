@@ -43,7 +43,7 @@ metadata:
     - jwt
     - opa
     - abac
-    - java-21
+    - kotlin
   links:
     - url: https://github.com/ssa1004/auth-service
       title: GitHub Repository
