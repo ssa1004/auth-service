@@ -143,8 +143,9 @@ SAS token store 를 거치지 않으므로 SAS 의 기본 revocation 은 *우리
   사라짐 — 후속에서 fail-closed 모드 검토.
 - (단점) RFC 7009 의 200 응답 규칙이 *권한 모델의 누락* 을 가린다. 잘못 설정된 admin
   client 가 잘못된 token 을 보내도 200 — audit log 와 사후 분석이 핵심.
-- (단점) admin client_secret 이 운영에서 평문으로 보관되면 권한 우회 위험. AGENTS.md 의
-  보안 규칙 (KMS / Vault / k8s Secret 외부 주입) 을 운영 전환 시 반드시 적용.
+- (단점) admin client_secret 이 운영에서 평문으로 보관되면 권한 우회 위험.
+  [CONTRIBUTING.md](../../CONTRIBUTING.md) 의 보안 규칙 (KMS / Vault / k8s Secret 외부
+  주입) 을 운영 전환 시 반드시 적용.
 
 ## 후속
 
