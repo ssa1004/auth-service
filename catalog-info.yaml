@@ -2,9 +2,9 @@
 # Backstage Software Catalog 정의 — 포트폴리오 system + auth-service component + OAuth2 API들.
 # spec: https://backstage.io/docs/features/software-catalog/descriptor-format
 #
-# 포트폴리오 9개 레포 (auth-service, security-log-search, notification-hub, search-service,
+# 포트폴리오 10개 레포 (auth-service, security-log-search, notification-hub, search-service,
 # billing-platform, bid-ask-marketplace, gpu-job-orchestrator, realtime-feed-service,
-# commerce-ops) 가 하나의 system 으로 묶인다는 것을 보여주기 위해
+# graphql-gateway, commerce-ops) 가 하나의 system 으로 묶인다는 것을 보여주기 위해
 # system 정의는 이 파일 (auth-service) 에서 한다. 나머지 레포는 system 을 참조만 한다.
 
 apiVersion: backstage.io/v1alpha1
@@ -12,12 +12,14 @@ kind: System
 metadata:
   name: ssa1004-portfolio
   description: |
-    ssa1004 백엔드 + DevOps 포트폴리오 system. 9개 레포가 한 system 으로 연동:
+    ssa1004 백엔드 + DevOps 포트폴리오 system. 10개 레포가 한 system 으로 연동:
     - auth-service (OAuth2/OIDC IdP) 가 JWT 발급
     - 도메인 서비스 (bid-ask-marketplace / billing-platform / gpu-job-orchestrator) 가
       Outbox + Kafka 로 도메인 이벤트 발행
+    - search-service 가 OpenSearch 기반 색인 / 질의 제공
     - notification-hub 가 도메인 이벤트 구독 → 알림 fan-out → alerts.fired 발행
     - realtime-feed-service 가 trade 이벤트를 WebSocket/SSE 로 스트리밍
+    - graphql-gateway 가 도메인 API 를 묶는 GraphQL BFF 로 JWT 검증 후 전파
     - security-log-search 가 alerts.fired 등 보안 이벤트를 집계 / 탐지
     - commerce-ops 가 OpenTelemetry / Prometheus / Grafana / Loki / Tempo
       관측성 stack + 자체 Spring Boot starter 4종 제공
