@@ -43,15 +43,15 @@
 
 ### 코드 위치
 
-- `auth-adapter-in/src/main/java/com/example/auth/adapter/in/rest/SessionController.java`
-- `auth-application/src/main/java/com/example/auth/application/service/RevokeSessionService.java`
-- `auth-adapter-out/src/main/java/com/example/auth/adapter/out/authz/EmbeddedPolicyDecisionAdapter.java#sessionRevoke`
+- `auth-adapter-in/src/main/kotlin/com/example/auth/adapter/in/rest/SessionController.kt`
+- `auth-application/src/main/kotlin/com/example/auth/application/service/RevokeSessionService.kt`
+- `auth-adapter-out/src/main/kotlin/com/example/auth/adapter/out/authz/EmbeddedPolicyDecisionAdapter.kt#sessionRevoke`
 - `policies/session_management.rego`
 
 ### 회귀 테스트
 
 - `auth-application/src/test/java/com/example/auth/application/service/RevokeAndListSessionsServiceTest.java`
-- `auth-adapter-out/src/test/java/com/example/auth/adapter/out/authz/OpaRegoEquivalenceTest.java` (Rego ↔ Java 동등성)
+- `auth-adapter-out/src/test/java/com/example/auth/adapter/out/authz/OpaRegoEquivalenceTest.java` (Rego ↔ embedded 동등성)
 
 ---
 
@@ -72,11 +72,11 @@
 
 ### 회귀 테스트
 
-- JWT 검증: `e2e-tests/.../IntrospectionE2eTest.java`, `JwksAndOidcDiscoveryE2eTest.java`.
-- JWK rotation: `e2e-tests/.../JwkRotationE2eTest.java` (grace 안 두 키 모두 검증 통과).
+- JWT 검증: `e2e-tests/.../IntrospectionE2eTest.kt`, `JwksAndOidcDiscoveryE2eTest.kt`.
+- JWK rotation: `e2e-tests/.../JwkRotationE2eTest.kt` (grace 안 두 키 모두 검증 통과).
 - Refresh reuse + grace: `auth-application/.../RefreshTokenServiceTest.java`,
-  `e2e-tests/.../RegisterAndLoginE2eTest.java`.
-- MFA: `auth-application/.../VerifyMfaServiceTest.java`, `e2e-tests/.../MfaFlowE2eTest.java`.
+  `e2e-tests/.../RegisterAndLoginE2eTest.kt`.
+- MFA: `auth-application/.../VerifyMfaServiceTest.java`, `e2e-tests/.../MfaFlowE2eTest.kt`.
 - Login fail-uniform: `auth-application/.../LoginServiceTest.java`.
 
 ---
@@ -96,7 +96,7 @@ DTO 의 sensitive field (password hash, client secret, refresh token hash) 가 �
 
 ### 회귀 테스트
 
-- DTO 정의 자체가 lock — `RegisterResponse.java` / `SessionResponse.java` / `TokenResponse.java` 의
+- DTO 정의 자체가 lock — `RegisterResponse.kt` / `SessionResponse.kt` / `TokenResponse.kt` 의
   필드 목록.
 - `auth-application/.../IntrospectTokenServiceTest.java` (active=false 시 다른 필드 노출 X).
 - README 의 "보안 점검 항목" 단락에 도메인 객체 `toString` 안전성 명시 (코드 리뷰 시 가드).
@@ -128,11 +128,11 @@ bucket4j-lettuce 기반 분산 token bucket (`RedisRateLimiterAdapter`) 으로 �
 
 ### 코드 위치
 
-- `auth-application/src/main/java/com/example/auth/application/service/LoginService.java`
-- `auth-application/src/main/java/com/example/auth/application/service/RegisterUserService.java`
-- `auth-application/src/main/java/com/example/auth/application/service/RefreshTokenService.java`
-- `auth-application/src/main/java/com/example/auth/application/service/VerifyMfaService.java`
-- `auth-adapter-out/src/main/java/com/example/auth/adapter/out/redis/RedisRateLimiterAdapter.java`
+- `auth-application/src/main/kotlin/com/example/auth/application/service/LoginService.kt`
+- `auth-application/src/main/kotlin/com/example/auth/application/service/RegisterUserService.kt`
+- `auth-application/src/main/kotlin/com/example/auth/application/service/RefreshTokenService.kt`
+- `auth-application/src/main/kotlin/com/example/auth/application/service/VerifyMfaService.kt`
+- `auth-adapter-out/src/main/kotlin/com/example/auth/adapter/out/redis/RedisRateLimiterAdapter.kt`
 
 ### 회귀 테스트
 
@@ -165,16 +165,16 @@ bucket4j-lettuce 기반 분산 token bucket (`RedisRateLimiterAdapter`) 으로 �
 
 ### 코드 위치
 
-- `auth-adapter-in/src/main/java/com/example/auth/adapter/in/rest/AdminController.java`
-- `auth-bootstrap/src/main/java/com/example/auth/bootstrap/security/SecurityConfig.java`
-- `auth-application/src/main/java/com/example/auth/application/service/AssignRoleService.java`
+- `auth-adapter-in/src/main/kotlin/com/example/auth/adapter/in/rest/AdminController.kt`
+- `auth-bootstrap/src/main/kotlin/com/example/auth/bootstrap/security/SecurityConfig.kt`
+- `auth-application/src/main/kotlin/com/example/auth/application/service/AssignRoleService.kt`
 - `policies/role_assignment.rego`
 
 ### 회귀 테스트
 
 - `auth-application/.../AssignRoleServiceTest.java`
 - `auth-adapter-out/.../OpaRegoEquivalenceTest.java`
-- `auth-bootstrap/.../ApplicationContextSmokeTest.java` (chain 부팅 확인)
+- `auth-bootstrap/.../ApplicationContextSmokeTest.kt` (chain 부팅 확인)
 
 ---
 
@@ -193,7 +193,7 @@ login bot / signup 자동화 같은 *합법적인 흐름의 자동화 남용*.
 
 ### 코드 위치
 
-- 위 API4 의 rate limit 흐름 + `auth-application/.../AuditLoginAttemptsService.java`.
+- 위 API4 의 rate limit 흐름 + `auth-application/.../AuditLoginAttemptsService.kt`.
 
 ### 회귀 테스트
 
@@ -256,16 +256,16 @@ CORS / HSTS / CSP / default password / Swagger 운영 노출 등.
 
 ### 코드 위치
 
-- `auth-bootstrap/src/main/java/com/example/auth/bootstrap/security/SecurityConfig.java`
+- `auth-bootstrap/src/main/kotlin/com/example/auth/bootstrap/security/SecurityConfig.kt`
   (`applyBaselineHeaders`)
 - `auth-bootstrap/src/main/resources/application.yml`
 - `helm/auth-service/values-prod.yaml`
 
 ### 회귀 테스트
 
-- `auth-bootstrap/.../ApplicationContextSmokeTest.java` (chain 부팅 / 헤더 빈 적용).
+- `auth-bootstrap/.../ApplicationContextSmokeTest.kt` (chain 부팅 / 헤더 빈 적용).
 - `auth-adapter-in/.../ClientIpResolverTest.java` (trusted-proxies 위조 차단).
-- `e2e-tests/.../OpenApiSpecE2eTest.java` (운영 OFF 시 spec 미노출 분기는 application-e2e.yml 의
+- `e2e-tests/.../OpenApiSpecE2eTest.kt` (운영 OFF 시 spec 미노출 분기는 application-e2e.yml 의
   on/off 토글로 확인).
 
 ---
@@ -284,7 +284,7 @@ deprecated / shadow / 더이상 사용하지 않는 endpoint, API 버전 관리 
 
 ### 회귀 테스트
 
-- `e2e-tests/.../OpenApiSpecE2eTest.java` — spec 의 path 목록을 회귀 락다운. 새 endpoint 추가 /
+- `e2e-tests/.../OpenApiSpecE2eTest.kt` — spec 의 path 목록을 회귀 락다운. 새 endpoint 추가 /
   제거 시 spec 검증이 깨져 의식적 갱신 강제.
 
 ---
@@ -309,9 +309,9 @@ deprecated / shadow / 더이상 사용하지 않는 endpoint, API 버전 관리 
 
 ### 코드 위치
 
-- `auth-adapter-out/src/main/java/com/example/auth/adapter/out/authz/OpaRestPolicyDecisionAdapter.java`
-- `auth-adapter-out/src/main/java/com/example/auth/adapter/out/authz/OpaInputMarshaller.java`
-- `auth-bootstrap/src/main/java/com/example/auth/bootstrap/oidc/OidcLoginAdapterConfig.java`
+- `auth-adapter-out/src/main/kotlin/com/example/auth/adapter/out/authz/OpaRestPolicyDecisionAdapter.kt`
+- `auth-adapter-out/src/main/kotlin/com/example/auth/adapter/out/authz/OpaInputMarshaller.kt`
+- `auth-bootstrap/src/main/kotlin/com/example/auth/bootstrap/oidc/OidcLoginAdapterConfig.kt`
 
 ### 회귀 테스트
 

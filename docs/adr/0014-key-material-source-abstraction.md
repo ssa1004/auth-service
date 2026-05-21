@@ -27,13 +27,13 @@ SDK 는 라이브러리 의존성을 본 모듈에 묶지 않기 위해 별도 w
 ## 결정
 
 ### `KeyMaterialSource` 포트
-```java
-public interface KeyMaterialSource {
-    KeyMaterial loadOrInitCurrent() throws Exception;
-    Optional<KeyMaterial> loadPrevious() throws Exception;
-    void rotate(KeyMaterial newCurrent) throws Exception;
+```kotlin
+interface KeyMaterialSource {
+    fun loadOrInitCurrent(): KeyMaterial
+    fun loadPrevious(): Optional<KeyMaterial>
+    fun rotate(newCurrent: KeyMaterial)
 
-    record KeyMaterial(String kid, KeyPair keyPair) {}
+    data class KeyMaterial(val kid: String, val keyPair: KeyPair)
 }
 ```
 
