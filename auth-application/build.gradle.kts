@@ -13,7 +13,7 @@ dependencies {
     api(project(":auth-domain"))
     api("org.springframework:spring-context")        // @Service, @Component
     api("org.springframework:spring-tx")              // @Transactional
-    api("org.slf4j:slf4j-api")                       // Lombok @Slf4j
+    api("org.slf4j:slf4j-api")                       // LoggerFactory.getLogger
     // 비밀번호 해시는 application 계층에서 도메인 정책 (cost=12) 을 강제하므로 PasswordEncoder 의존 허용.
     // 도메인이 아니라 application 에 둠으로써 Spring Security 의존성을 도메인에서 제거.
     api("org.springframework.security:spring-security-crypto")
