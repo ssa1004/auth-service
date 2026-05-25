@@ -37,7 +37,7 @@ dependencies {
     // Kotlin null-safety 와 호환되는 Jackson module — e2e 테스트의 ObjectMapper 도 Kotlin DTO 인식.
     testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     // Mockito Kotlin helpers — 필요 시 사용.
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
 }
 
 kotlin {
