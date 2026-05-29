@@ -71,6 +71,14 @@ multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
 
 ## 빠른 시작
 
+> `make help` 로 전체 명령을 볼 수 있습니다. 가장 빠른 길:
+> ```bash
+> make up      # 인프라 기동 (Postgres / Redis / Mailhog)
+> make run     # 다른 셸에서 auth 서비스 (:auth-bootstrap bootRun, :8080)
+> make demo    # client_credentials 발급 → 호출 → introspect → revoke 시연
+> make test    # 전체 검증 (단위 + 통합 + e2e)
+> ```
+
 ```bash
 # 로컬 개발 (Postgres + Redis + Mailhog + auth)
 docker compose -f infrastructure/docker/docker-compose.yml up --build
@@ -281,6 +289,10 @@ k6 run load/k6/scenarios/token-issue.js
 
 18개 ADR 로 핵심 결정을 정리했습니다. 각 ADR 는 결정의 배경 / 선택 / 근거 / 장단점을
 짧게 정리하는 형식입니다.
+
+> 어디부터 볼지 막막하면 [docs/backend-skills-index.md](docs/backend-skills-index.md) —
+> 이 레포의 패턴(JWK rotation, refresh reuse + grace, OPA ABAC, RFC 7662 / 7009 등)을
+> **코드 → ADR(왜) → 이론([dev-lab](https://github.com/ssa1004/dev-lab))** 으로 잇는 학습 인덱스 + 추천 학습 순서.
 
 | 번호 | 제목 |
 | --- | --- |
