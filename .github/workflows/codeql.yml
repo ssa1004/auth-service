@@ -47,8 +47,14 @@ jobs:
       # autobuild 대신 명시적 빌드 — 멀티모듈 Gradle 은 직접 호출이 더 안정적.
       # production 코드는 Kotlin 이므로 compileKotlin 을 호출 (compileJava 는 NO-SOURCE).
       # 테스트는 ci.yml 이 담당하므로 여기서는 컴파일만.
+      #
+      # CodeQL 트레이서는 *실제 컴파일러 호출* 을 가로채 소스를 추출한다. 그런데 위 Cache
+      # Gradle 단계가 빌드 캐시를 복원하면 compileKotlin 이 FROM-CACHE / UP-TO-DATE 로 끝나
+      # 컴파일러가 한 번도 실행되지 않고, CodeQL 이 "no source code seen during build" 로
+      # 실패한다(run 27807658345). 따라서 이 빌드만큼은 캐시/증분 스킵을 끄고 clean 후
+      # --rerun-tasks 로 강제 재컴파일해 트레이서가 항상 소스를 보게 한다.
       - name: Build
-        run: ./gradlew --no-daemon compileKotlin compileJava
+        run: ./gradlew --no-daemon --no-build-cache --rerun-tasks clean compileKotlin compileJava
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
