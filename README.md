@@ -257,13 +257,45 @@ introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가
 ./gradlew :e2e-tests:test
 ```
 
-테스트 카운트:
-- domain: 26
-- application: 58
-- adapter-in: 13
-- adapter-out: 46 (OPA Rego ↔ embedded 동등성 21 케이스 포함)
-- bootstrap: 8
-- e2e: 17 (OpenAPI spec 정확성 4 + JWK rotation 시나리오 2 포함)
+테스트 카운트 (실행되는 테스트 invocation 기준 — `@ParameterizedTest` 는 case 수만큼 전개):
+
+| 모듈 | invocation | 비고 |
+| --- | --- | --- |
+| domain | 26 | 순수 도메인 (Spring/Docker 불필요) |
+| application | 58 | Mockito 단위 (Spring/Docker 불필요) |
+| adapter-in | 13 | `@WebMvcTest` 슬라이스 |
+| adapter-out | 46 | `@Test` 25 + OPA Rego ↔ embedded 동등성 `@ParameterizedTest` 21 case |
+| bootstrap | 8 | 컨텍스트 부팅 / Hikari / readiness |
+| e2e | 17 | OpenAPI spec 정확성 4 + JWK rotation 2 포함 |
+
+> adapter-out 의 46 은 `@Test` 메서드 25개 + 단일 `@ParameterizedTest` 가 펼치는 21개
+> case (`OpaRegoEquivalenceTest`) 의 합입니다. `grep -c '@Test'` 만으로는 25 로 보이니
+> 주의하세요. 나머지 모듈은 모두 `@Test` 메서드 수와 invocation 수가 같습니다.
+
+<a id="coverage"></a>
+## Coverage
+
+멀티모듈 통합 커버리지는 Gradle 내장 `jacoco-report-aggregation` 으로 각 모듈의
+`test.exec` 를 모아 단일 리포트로 합산합니다 ([build.gradle.kts](build.gradle.kts)).
+
+```bash
+# 통합 리포트 (Docker 필요 — adapter-out / bootstrap / e2e 가 Testcontainers 를 띄움)
+./gradlew testCodeCoverageReport
+# → build/reports/jacoco/testCodeCoverageReport/index.html  (+ .xml)
+
+# Docker 없이 빠르게 보고 싶을 때 — 순수 단위 모듈만
+./gradlew :auth-domain:test :auth-domain:jacocoTestReport
+./gradlew :auth-application:test :auth-application:jacocoTestReport
+# → <module>/build/reports/jacoco/test/html/index.html
+```
+
+CI 의 `test` 잡이 `testCodeCoverageReport` 를 실행하고 결과를 `coverage-report`
+아티팩트로 업로드합니다. 배지는 커버리지 리포트 *생성 수단(JaCoCo)* 을 가리키며,
+수치 배지는 호스팅 커버리지 서비스(Codecov 등) 연동 시 교체할 수 있습니다.
+
+> Kotlin 도메인 value object 는 컴파일러가 합성하는 `Companion` / `toString` /
+> `equals` accessor 때문에 instruction 커버리지가 line 커버리지보다 낮게 나옵니다 —
+> 합산 수치를 읽을 때 참고하세요.
 
 ## 인프라
 
@@ -274,8 +306,8 @@ introspect 는 매 요청마다 IdP 왕복이라 *Resource Server 측 cache* 가
   `drop ALL caps`.
 - `helm/auth-service/` — 같은 manifest 의 Helm chart 버전. dev / staging / prod 환경 분기를
   values 로 처리 (자세한 설명은 [Deployment](#deployment) 절).
-- `.github/workflows/ci.yml` — `workflow_dispatch` only. gradle wrapper 검증 →
-  `./gradlew check` → docker buildx (no push) → helm lint.
+- `.github/workflows/ci.yml` — `push` / `pull_request` (main) + 수동 `workflow_dispatch`.
+  gradle wrapper 검증 → `./gradlew check` + 통합 JaCoCo 커버리지 → docker buildx (no push) → helm lint.
 - `.github/workflows/codeql.yml` — CodeQL Java/Kotlin SAST. push / PR + 주 1회 정기 스캔.
 - `.github/dependabot.yml` — gradle / github-actions 의존성 주 1회 점검.
 
