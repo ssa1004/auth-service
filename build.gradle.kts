@@ -66,6 +66,37 @@ subprojects {
     dependencies {
         // Gradle 8+ 부터 launcher 가 transitively 안 끌려옴 → 명시
         "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+
+        // ── 통합 커버리지(jacoco-report-aggregation) 호환을 위한 BOM platform 선언 ──
+        // io.spring.dependency-management 의 imports{} 는 자신이 아는 컴파일/런타임 configuration
+        // 에만 버전을 주입할 뿐, 진짜 Gradle dependency constraint 를 만들지 않는다. 그래서
+        // jacoco-report-aggregation 이 만드는 :aggregateCodeCoverageReportResults 가
+        // 모듈 런타임 변형(variant)을 variant-aware 로 다시 해석할 때 BOM 버전이 빠져
+        // "Could not find org.springframework:spring-tx:." 처럼 version 이 비어 실패한다.
+        // 같은 BOM 을 Gradle 네이티브 platform() 으로도 선언하면 모든 configuration 으로
+        // 전파되는 실제 constraint 가 생겨 집계 configuration 도 버전을 해석한다.
+        // (일반 빌드 동작은 동일 BOM·동일 버전이라 변화 없음.)
+        val springBootBom = platform("org.springframework.boot:spring-boot-dependencies:3.4.13")
+        val springSecurityBom = platform("org.springframework.security:spring-security-bom:6.4.13")
+        // 모든 의존 버킷 configuration 에 platform constraint 를 건다.
+        // api 는 java-library 적용 모듈에만 존재하므로 findByName 으로 가드.
+        listOf("api", "implementation", "testImplementation").forEach { bucket ->
+            configurations.findByName(bucket)?.let {
+                add(bucket, springBootBom)
+                add(bucket, springSecurityBom)
+            }
+        }
+        // BOM 에 없는(직접 관리하던) 좌표는 constraint 로 버전을 고정해 집계 해석을 보장.
+        constraints {
+            listOf("api", "implementation").forEach { bucket ->
+                if (configurations.findByName(bucket) != null) {
+                    add(bucket, "org.springframework.security:spring-security-oauth2-authorization-server:1.4.8")
+                    add(bucket, "dev.samstevens.totp:totp:1.7.1")
+                    add(bucket, "com.bucket4j:bucket4j_jdk17-core:8.14.0")
+                    add(bucket, "com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
+                }
+            }
+        }
     }
 
     tasks.withType<Test> {
