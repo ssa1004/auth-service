@@ -1,7 +1,110 @@
 # auth-service
 
 [![CI](https://github.com/ssa1004/auth-service/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssa1004/auth-service/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/ssa1004/auth-service/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/ssa1004/auth-service/actions/workflows/codeql.yml)
+[![Coverage](https://img.shields.io/badge/coverage-JaCoCo-brightgreen.svg)](#coverage)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> **English summary below. 한국어 문서는 [그 아래](#모듈)에서 이어집니다.**
+
+## Overview (English)
+
+`auth-service` is an **OAuth2 / OIDC Identity Provider (IdP)**. Where the other
+services in this portfolio act as *resource servers* that **verify** JWTs, this
+service is the *issuer* that **mints** them. It bundles JWT issuance, JWK
+rotation, refresh-token rotation with reuse detection, RBAC, multi-tenancy,
+TOTP-based 2FA, token introspection/revocation, and append-only audit into one
+deployable.
+
+- **Stack** — Kotlin · Spring Boot 3.4 · JVM 21 toolchain · Spring Authorization Server 1.4
+- **Storage** — Postgres + Flyway + JPA · Redis (refresh reuse detection, rate limit, MFA challenge)
+- **Architecture** — Hexagonal (ports & adapters), 6 Gradle modules
+- **Decisions** — 18 ADRs in [`docs/adr`](docs/adr)
+
+### Feature set
+
+| Capability | What it does |
+| --- | --- |
+| **OAuth2 / OIDC** | Spring Authorization Server exposes `/oauth2/token`, `/oauth2/jwks`, `/.well-known/openid-configuration`. First-party `/api/v1/auth/*` endpoints coexist. |
+| **JWK rotation** | RS256 / RSA-2048, 24h cycle, previous key kept for one grace cycle ([ADR-0003](docs/adr/0003-jwk-rotation-strategy.md)). |
+| **Refresh rotation + reuse detection** | Only the SHA-256 hash is stored; replay of a rotated token force-revokes the family (5s grace window) ([ADR-0004](docs/adr/0004-refresh-token-rotation-and-reuse-detection.md)). |
+| **RBAC + ABAC** | User → Role → Permission claims, plus OPA Rego policies with an embedded equivalence test ([ADR-0005](docs/adr/0005-rbac-vs-abac.md), [ADR-0016](docs/adr/0016-opa-policy-decision.md)). |
+| **Multi-tenancy** | JWT `tnt` claim + tenant_id enforced on every query ([ADR-0006](docs/adr/0006-multi-tenant-data-isolation.md)). |
+| **2FA — TOTP** | RFC 6238, secret stored AES-GCM encrypted, challenge token consumed once ([ADR-0007](docs/adr/0007-mfa-totp-vs-sms-webauthn.md)). |
+| **RFC 7662 Introspection** | `/oauth2/introspect` — resource servers confirm a token's `active` state ([ADR-0017](docs/adr/0017-token-introspection-rfc-7662.md)). |
+| **RFC 7009 Revocation** | `/oauth2/revoke` — admin force-revoke; access JWT goes to a Redis blocklist, refresh to `REVOKED_BY_ADMIN` ([ADR-0018](docs/adr/0018-token-revocation-rfc-7009.md)). |
+| **Append-only audit** | Login attempts / security events written `REQUIRES_NEW`, masked PII ([ADR-0008](docs/adr/0008-audit-log-append-only.md)). |
+
+### Architecture — hexagonal modules
+
+The domain core has zero framework dependencies. Application use cases depend
+only on **ports** (interfaces); concrete I/O lives in inbound/outbound
+**adapters**. `auth-bootstrap` wires everything into a Spring Boot app, and
+`e2e-tests` exercises the assembled system against Testcontainers.
+
+```mermaid
+flowchart TB
+    subgraph adapterIn["auth-adapter-in (inbound adapters)"]
+        REST["REST controllers<br/>/api/v1/*"]
+        AS["Spring Authorization Server<br/>/oauth2/*"]
+    end
+
+    subgraph application["auth-application (use cases + ports)"]
+        UC["11 use cases<br/>@Service / @Transactional"]
+        PIN["inbound ports"]
+        POUT["outbound ports"]
+    end
+
+    subgraph domain["auth-domain (pure Kotlin, 0 Spring)"]
+        DOM["User · Tenant · Role · Permission<br/>RefreshToken · MfaSecret · AuditEvent"]
+    end
+
+    subgraph adapterOut["auth-adapter-out (outbound adapters)"]
+        JPA["JPA / Postgres / Flyway"]
+        REDIS["Redis (reuse · rate-limit · MFA)"]
+        CRYPTO["TOTP · BCrypt · AES-GCM · Nimbus JOSE"]
+        OPA["OPA Rego / embedded ABAC"]
+    end
+
+    REST --> PIN
+    AS --> PIN
+    PIN --> UC
+    UC --> DOM
+    UC --> POUT
+    POUT -. implemented by .-> JPA
+    POUT -. implemented by .-> REDIS
+    POUT -. implemented by .-> CRYPTO
+    POUT -. implemented by .-> OPA
+
+    BOOT["auth-bootstrap<br/>Spring Boot main · JWK rotation · SecurityFilterChain · Flyway"]
+    E2E["e2e-tests<br/>Testcontainers Postgres + Redis"]
+    BOOT --> REST
+    BOOT --> UC
+    BOOT --> JPA
+    BOOT --> DOM
+    E2E --> BOOT
+```
+
+Dependency rule: arrows point **inward** toward the domain. The domain knows
+nothing about Spring, JPA, or Redis; adapters depend on ports, never the reverse.
+
+### Quickstart
+
+```bash
+make up      # start infra (Postgres / Redis / Mailhog)
+make run     # in another shell: :auth-bootstrap bootRun on :8080
+make demo    # client_credentials issue -> call -> introspect -> revoke demo
+make test    # full verification (unit + integration + e2e)
+```
+
+- OIDC discovery — `http://localhost:8080/.well-known/openid-configuration`
+- JWKS — `http://localhost:8080/oauth2/jwks`
+- Swagger UI — `http://localhost:8080/swagger-ui.html` (needs `AUTH_OPENAPI_ENABLED=true`)
+
+See [Coverage](#coverage) for how the aggregated test-coverage report is built.
+The full Korean documentation follows.
+
+---
 
 OAuth2 / OIDC IdP. 다른 internal service 들이 JWT 를 검증하는 consumer 라면 이 서비스는
 JWT 를 발행하는 issuer 입니다. JWT 발행, JWK rotation, refresh token rotation, RBAC,
