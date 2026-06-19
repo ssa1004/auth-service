@@ -11,6 +11,11 @@
     (`/oauth2/token`, `/oauth2/jwks`, `/.well-known/openid-configuration`)
 
 > 이 디렉토리의 `*.yaml` 은 CI 에서 생성·갱신된다. 로컬에서 수기로 편집하지 않는다.
+>
+> **현재 상태**: `auth-service.yaml` 는 앱 부팅(Postgres / Redis 필요)을 거쳐야만
+> 진실되게 생성되므로 레포에 미리 commit 해 두지 않는다. 아래 "생성 방법" 의 명령으로
+> 의존 인프라를 띄운 뒤 직접 산출하거나, CI 의 `generateOpenApiDocs` 결과를 참조한다.
+> (손으로 작성한 spec 은 코드와 어긋날 수 있어 두지 않는다.)
 
 ## 생성 방법
 
