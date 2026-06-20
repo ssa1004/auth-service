@@ -10,6 +10,7 @@ import io.lettuce.core.RedisClient
 import jakarta.annotation.PreDestroy
 import java.nio.charset.StandardCharsets
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
@@ -18,9 +19,20 @@ import org.springframework.stereotype.Component
  *
  * bucket4j-lettuce CAS — atomic token bucket 을 Redis 에 분산 저장.
  * key 예: `login:<tenant>:<ip>:<email>`.
+ *
+ * `auth.rate-limit.redis-enabled` 가 true (default, 운영) 일 때만 이 빈이 생성됩니다.
+ * false (dev/local) 면 본 빈은 만들어지지 않으므로 부팅 시 Lettuce 가 Redis 로 연결을
+ * 시도하지 않고, 대신 [InMemoryRateLimiterAdapter] 가 in-process token bucket 으로
+ * 동작합니다 — Redis 등 외부 인프라 없이 부팅 가능 (multi-instance 분산은 운영 prod 경로만).
  */
 @Component
 @Profile("!e2e")
+@ConditionalOnProperty(
+    prefix = "auth.rate-limit",
+    name = ["redis-enabled"],
+    havingValue = "true",
+    matchIfMissing = true,
+)
 class RedisRateLimiterAdapter(
     @Value("\${spring.data.redis.url:redis://localhost:6379}") redisUrl: String,
     properties: AuthProperties,
