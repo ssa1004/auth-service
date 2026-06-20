@@ -1,0 +1,63 @@
+# dev — 외부 인프라 ZERO 로컬 부팅 프로파일.
+#
+# Postgres / Redis / Kafka / SMTP 없이 './gradlew :auth-bootstrap:bootRun
+# --args=--spring.profiles.active=dev' 만으로 컨텍스트가 뜨고 엔드포인트를 제공합니다.
+#
+#  - DataSource : H2 in-memory (test 프로파일과 동일 설정 재사용)
+#  - Flyway     : H2 에서는 비활성 + ddl-auto=update (PostgreSQL 전용 마이그레이션 회피)
+#  - RateLimiter: auth.rate-limit.redis-enabled=false → InMemoryRateLimiterAdapter
+#                 (RedisRateLimiterAdapter 의 eager Lettuce 연결을 차단)
+#  - Redis      : health indicator / readiness 의존에서 제외 (없어도 /actuator/health=UP)
+#  - Mail(SMTP) : 전송 실패는 SmtpVerificationMailSenderAdapter 가 삼키므로 부팅 비차단.
+#
+# 운영(prod)은 이 파일을 쓰지 않으며 redis-enabled 가 default(true)이므로 영향 없음.
+
+spring:
+  jpa:
+    hibernate:
+      # test 와 동일 — Flyway 마이그레이션은 PostgreSQL dialect 라 H2 에서는 ddl-auto 로 스키마 생성.
+      ddl-auto: update
+  flyway:
+    enabled: false
+  datasource:
+    url: jdbc:h2:mem:auth;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      leak-detection-threshold: 0
+      maximum-pool-size: 4
+      minimum-idle: 1
+      connection-timeout: 5000
+
+# Redis / SMTP 가 없으므로 두 health indicator 를 끔 — 그래야 /actuator/health 가 UP.
+# (메일 전송 자체는 SmtpVerificationMailSenderAdapter 가 예외를 삼켜 부팅/요청을 막지 않지만,
+#  Spring 의 MailHealthIndicator 는 SMTP 로 ping 하므로 dev 에서 root health 를 DOWN 으로 만든다.)
+management:
+  health:
+    redis:
+      enabled: false
+    mail:
+      enabled: false
+  endpoint:
+    health:
+      # 기본은 readiness 에 redis 포함(application.yml). dev 에서는 db 만 본다.
+      group:
+        readiness:
+          include: readinessState,db
+
+# 로컬 부팅 시 OIDC discovery / Swagger 등 공개 메타데이터를 켜 둠 (운영은 default off).
+AUTH_OPENAPI_ENABLED: true
+
+auth:
+  rate-limit:
+    # false → RedisRateLimiterAdapter 를 만들지 않고 InMemoryRateLimiterAdapter 활성.
+    # (default/true 이면 운영과 동일하게 Redis 기반 분산 제한기 사용 — prod 경로 불변.)
+    redis-enabled: false
+  jwk:
+    # local-jwk 파일을 working dir 대신 build/ 아래로 격리 (test 프로파일과 동일 패턴).
+    local-path: build/dev/local-jwk.json
+
+logging:
+  level:
+    com.example.auth: DEBUG
