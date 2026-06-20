@@ -7,6 +7,7 @@ import org.springframework.boot.availability.ApplicationAvailability
 import org.springframework.boot.availability.AvailabilityChangeEvent
 import org.springframework.boot.availability.LivenessState
 import org.springframework.boot.availability.ReadinessState
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
@@ -32,6 +33,8 @@ open class ApplicationReadinessCoordinator(
     private val publisher: ApplicationEventPublisher,
     private val healthRegistry: HealthContributorRegistry,
     private val jwkSourceProvider: JwkSourceProvider,
+    // 운영 default true. dev/local 은 false — Redis 없이 부팅하므로 readiness 의존에서 제외.
+    @Value("\${auth.rate-limit.redis-enabled:true}") private val redisEnabled: Boolean = true,
 ) {
 
     private var consecutiveFailures = 0
@@ -64,7 +67,8 @@ open class ApplicationReadinessCoordinator(
     @Scheduled(fixedDelay = 5000L)
     open fun recheckExternalDependencies() {
         val dbUp = isContributorUp("db")
-        val redisUp = isContributorUp("redis")
+        // dev(redis-enabled=false) 에서는 Redis 가 없으므로 readiness 판단에서 제외.
+        val redisUp = !redisEnabled || isContributorUp("redis")
 
         if (dbUp && redisUp) {
             if (consecutiveFailures > 0) {
