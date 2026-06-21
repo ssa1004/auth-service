@@ -58,8 +58,8 @@ subprojects {
         dependencies {
             dependency("org.springframework.security:spring-security-oauth2-authorization-server:1.5.8")
             dependency("dev.samstevens.totp:totp:1.7.1")
-            dependency("com.bucket4j:bucket4j_jdk17-core:8.14.0")
-            dependency("com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
+            dependency("com.bucket4j:bucket4j_jdk17-core:8.19.0")
+            dependency("com.bucket4j:bucket4j_jdk17-lettuce:8.19.0")
 
             // ── 보안: Trivy image 게이트(HIGH/CRITICAL, ignore-unfixed)가 잡은
             //         고칠 수 있는 transitive CVE 를 fixed 최소 버전으로 상향 ──
@@ -130,8 +130,8 @@ subprojects {
                 if (configurations.findByName(bucket) != null) {
                     add(bucket, "org.springframework.security:spring-security-oauth2-authorization-server:1.5.8")
                     add(bucket, "dev.samstevens.totp:totp:1.7.1")
-                    add(bucket, "com.bucket4j:bucket4j_jdk17-core:8.14.0")
-                    add(bucket, "com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
+                    add(bucket, "com.bucket4j:bucket4j_jdk17-core:8.19.0")
+                    add(bucket, "com.bucket4j:bucket4j_jdk17-lettuce:8.19.0")
 
                     // ── 보안: Trivy image 게이트(HIGH/CRITICAL, ignore-unfixed)가 잡은
                     //         고칠 수 있는 transitive CVE 를 fixed 최소 버전으로 상향 ──
