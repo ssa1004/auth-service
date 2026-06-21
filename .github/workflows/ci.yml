@@ -72,6 +72,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     timeout-minutes: 15
+    # Trivy 스캔 결과(SARIF)를 GitHub Security 탭에 업로드하기 위한 최소 권한 상향.
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -83,12 +87,37 @@ jobs:
         with:
           context: .
           push: false
+          # 빌드 이미지를 로컬 daemon 에 적재 — 아래 Trivy image 스캔이 참조한다.
+          load: true
           tags: auth-service:ci
           build-args: |
             VCS_REF=${{ github.sha }}
             BUILD_DATE=${{ github.event.repository.updated_at }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # 빌드된 이미지를 실제로 스캔하는 게이트 — fixable HIGH/CRITICAL 이 있으면 빌드 실패.
+      # ignore-unfixed: 아직 패치가 없는 취약점은 차단 대상에서 제외(잡음 방지).
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: image
+          image-ref: auth-service:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: sarif
+          output: trivy.sarif
+
+      # Security 탭 적재는 게이트가 아니므로 실패해도 빌드를 막지 않는다(continue-on-error).
+      # 스캔 게이트 자체가 exit-code:1 로 실패했어도 SARIF 는 올린다(if: always()).
+      - name: Upload Trivy SARIF
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-image
 
   helm:
     runs-on: ubuntu-latest
