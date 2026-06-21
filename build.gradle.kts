@@ -1,7 +1,7 @@
 // 루트 빌드 — 공통 conventions. 각 모듈이 상속받는 공유 설정.
 plugins {
     java
-    id("org.springframework.boot") version "3.5.15" apply false
+    id("org.springframework.boot") version "4.1.0" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     // domain / application / adapter 가 Kotlin. 적용은 각 모듈 build.gradle.kts 에서만.
     // 버전은 auth-domain / auth-application 기존 선언 (1.9.25) 과 정렬.
@@ -51,12 +51,12 @@ subprojects {
 
     the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
         imports {
-            mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.15")
-            mavenBom("org.springframework.security:spring-security-bom:6.5.11")
+            mavenBom("org.springframework.boot:spring-boot-dependencies:4.1.0")
+            mavenBom("org.springframework.security:spring-security-bom:7.1.0")
         }
         // Spring Authorization Server 1.5.x 가 Spring Boot 3.5 / Security 6.5 호환.
         dependencies {
-            dependency("org.springframework.security:spring-security-oauth2-authorization-server:1.5.8")
+            dependency("org.springframework.security:spring-security-oauth2-authorization-server:7.1.0")
             dependency("dev.samstevens.totp:totp:1.7.1")
             dependency("com.bucket4j:bucket4j_jdk17-core:8.14.0")
             dependency("com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
@@ -109,8 +109,8 @@ subprojects {
         // 같은 BOM 을 Gradle 네이티브 platform() 으로도 선언하면 모든 configuration 으로
         // 전파되는 실제 constraint 가 생겨 집계 configuration 도 버전을 해석한다.
         // (일반 빌드 동작은 동일 BOM·동일 버전이라 변화 없음.)
-        val springBootBom = platform("org.springframework.boot:spring-boot-dependencies:3.5.15")
-        val springSecurityBom = platform("org.springframework.security:spring-security-bom:6.5.11")
+        val springBootBom = platform("org.springframework.boot:spring-boot-dependencies:4.1.0")
+        val springSecurityBom = platform("org.springframework.security:spring-security-bom:7.1.0")
         // OTel BOM 도 네이티브 platform 으로 — variant-aware 재해석/집계 configuration 까지
         // 1.62.0 이 전파되도록(CVE-2026-45292). dependency-management imports 만으로는
         // 진짜 Gradle constraint 가 안 생겨 일부 변형에서 1.49.0 으로 되돌아갈 수 있다.
@@ -128,7 +128,7 @@ subprojects {
         constraints {
             listOf("api", "implementation").forEach { bucket ->
                 if (configurations.findByName(bucket) != null) {
-                    add(bucket, "org.springframework.security:spring-security-oauth2-authorization-server:1.5.8")
+                    add(bucket, "org.springframework.security:spring-security-oauth2-authorization-server:7.1.0")
                     add(bucket, "dev.samstevens.totp:totp:1.7.1")
                     add(bucket, "com.bucket4j:bucket4j_jdk17-core:8.14.0")
                     add(bucket, "com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
