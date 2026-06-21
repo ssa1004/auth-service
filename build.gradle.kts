@@ -1,7 +1,7 @@
 // 루트 빌드 — 공통 conventions. 각 모듈이 상속받는 공유 설정.
 plugins {
     java
-    id("org.springframework.boot") version "3.4.13" apply false
+    id("org.springframework.boot") version "3.5.15" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     // domain / application / adapter 가 Kotlin. 적용은 각 모듈 build.gradle.kts 에서만.
     // 버전은 auth-domain / auth-application 기존 선언 (1.9.25) 과 정렬.
@@ -51,12 +51,12 @@ subprojects {
 
     the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
         imports {
-            mavenBom("org.springframework.boot:spring-boot-dependencies:3.4.13")
-            mavenBom("org.springframework.security:spring-security-bom:6.4.13")
+            mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.15")
+            mavenBom("org.springframework.security:spring-security-bom:6.5.11")
         }
-        // Spring Authorization Server 1.4.x 가 Spring Boot 3.4 / Security 6.4 호환.
+        // Spring Authorization Server 1.5.x 가 Spring Boot 3.5 / Security 6.5 호환.
         dependencies {
-            dependency("org.springframework.security:spring-security-oauth2-authorization-server:1.4.8")
+            dependency("org.springframework.security:spring-security-oauth2-authorization-server:1.5.8")
             dependency("dev.samstevens.totp:totp:1.7.1")
             dependency("com.bucket4j:bucket4j_jdk17-core:8.14.0")
             dependency("com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
@@ -76,8 +76,8 @@ subprojects {
         // 같은 BOM 을 Gradle 네이티브 platform() 으로도 선언하면 모든 configuration 으로
         // 전파되는 실제 constraint 가 생겨 집계 configuration 도 버전을 해석한다.
         // (일반 빌드 동작은 동일 BOM·동일 버전이라 변화 없음.)
-        val springBootBom = platform("org.springframework.boot:spring-boot-dependencies:3.4.13")
-        val springSecurityBom = platform("org.springframework.security:spring-security-bom:6.4.13")
+        val springBootBom = platform("org.springframework.boot:spring-boot-dependencies:3.5.15")
+        val springSecurityBom = platform("org.springframework.security:spring-security-bom:6.5.11")
         // 모든 의존 버킷 configuration 에 platform constraint 를 건다.
         // api 는 java-library 적용 모듈에만 존재하므로 findByName 으로 가드.
         listOf("api", "implementation", "testImplementation").forEach { bucket ->
@@ -90,7 +90,7 @@ subprojects {
         constraints {
             listOf("api", "implementation").forEach { bucket ->
                 if (configurations.findByName(bucket) != null) {
-                    add(bucket, "org.springframework.security:spring-security-oauth2-authorization-server:1.4.8")
+                    add(bucket, "org.springframework.security:spring-security-oauth2-authorization-server:1.5.8")
                     add(bucket, "dev.samstevens.totp:totp:1.7.1")
                     add(bucket, "com.bucket4j:bucket4j_jdk17-core:8.14.0")
                     add(bucket, "com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
