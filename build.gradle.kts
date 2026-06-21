@@ -10,7 +10,7 @@ plugins {
     //                  open 처리해 CGLIB proxy 가능하게 한다. application / adapter-in / adapter-out 에 적용.
     kotlin("plugin.spring") version "1.9.25" apply false
     // plugin.jpa — @Entity 가 붙은 class 에 no-arg constructor 합성. adapter-out 만 사용.
-    kotlin("plugin.jpa") version "1.9.25" apply false
+    kotlin("plugin.jpa") version "2.4.0" apply false
     // OpenAPI spec build-time export — 실제 적용은 bootstrap 모듈.
     id("org.springdoc.openapi-gradle-plugin") version "1.9.0" apply false
     // 멀티모듈 통합 커버리지 — 각 모듈의 jacoco exec 를 모아 단일 리포트로 합산.
