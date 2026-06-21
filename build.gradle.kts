@@ -60,6 +60,39 @@ subprojects {
             dependency("dev.samstevens.totp:totp:1.7.1")
             dependency("com.bucket4j:bucket4j_jdk17-core:8.14.0")
             dependency("com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
+
+            // ── 보안: Trivy image 게이트(HIGH/CRITICAL, ignore-unfixed)가 잡은
+            //         고칠 수 있는 transitive CVE 를 fixed 최소 버전으로 상향 ──
+            // io.spring.dependency-management 의 explicit dependency() override 는
+            // import 된 Spring Boot BOM 버전(및 BOM 의 version-property)을 항상 이긴다.
+            // (BOM 을 추가 import 하는 방식은 Spring Boot BOM 의 version-property 우선순위에
+            //  밀려 OTel 에 적용되지 않아 per-artifact override 를 쓴다.)
+
+            // commons-lang3 3.17.0 → CVE-2025-48924: ClassUtils.getClass 무제한 재귀로
+            // StackOverflowError(DoS). 3.18.0 에서 수정.
+            dependency("org.apache.commons:commons-lang3:3.18.0")
+
+            // nimbus-jose-jwt — adapter-out 직접 사용(JWK/RS256). SAS/oauth2-jose transitive
+            // 가 9.47 로 끌어올리나 advisory vulnerable 범위(CVE-2025-53864, 깊게 중첩된 JSON
+            // claim 무제한 재귀 DoS). 9.x 패치(9.37.4)는 9.47 보다 낮아 다운그레이드라 부적합
+            // → 다음 fixed 인 10.0.2. 사용 API(JWK/JWKSet/RSAKey/RSAKeyGenerator/SignedJWT/
+            // DefaultJWTProcessor 등)는 9.x→10.x 호환(10.x Java 11+, 본 프로젝트 JDK21 충족).
+            dependency("com.nimbusds:nimbus-jose-jwt:10.0.2")
+
+            // OpenTelemetry family — CVE-2026-45292: baggage 파싱 무제한 메모리/CPU
+            // (opentelemetry-api + opentelemetry-extension-trace-propagators). 1.62.0 에서 수정.
+            // OTel 8개 아티팩트는 한 릴리스로 함께 테스트되므로 전부 1.62.0 으로 정렬해
+            // 버전 skew(LinkageError/NoSuchMethodError)를 피한다.
+            dependencySet(mapOf("group" to "io.opentelemetry", "version" to "1.62.0")) {
+                entry("opentelemetry-api")
+                entry("opentelemetry-context")
+                entry("opentelemetry-extension-trace-propagators")
+                entry("opentelemetry-sdk")
+                entry("opentelemetry-sdk-common")
+                entry("opentelemetry-sdk-logs")
+                entry("opentelemetry-sdk-metrics")
+                entry("opentelemetry-sdk-trace")
+            }
         }
     }
 
@@ -78,12 +111,17 @@ subprojects {
         // (일반 빌드 동작은 동일 BOM·동일 버전이라 변화 없음.)
         val springBootBom = platform("org.springframework.boot:spring-boot-dependencies:3.5.15")
         val springSecurityBom = platform("org.springframework.security:spring-security-bom:6.5.11")
+        // OTel BOM 도 네이티브 platform 으로 — variant-aware 재해석/집계 configuration 까지
+        // 1.62.0 이 전파되도록(CVE-2026-45292). dependency-management imports 만으로는
+        // 진짜 Gradle constraint 가 안 생겨 일부 변형에서 1.49.0 으로 되돌아갈 수 있다.
+        val otelBom = platform("io.opentelemetry:opentelemetry-bom:1.62.0")
         // 모든 의존 버킷 configuration 에 platform constraint 를 건다.
         // api 는 java-library 적용 모듈에만 존재하므로 findByName 으로 가드.
         listOf("api", "implementation", "testImplementation").forEach { bucket ->
             configurations.findByName(bucket)?.let {
                 add(bucket, springBootBom)
                 add(bucket, springSecurityBom)
+                add(bucket, otelBom)
             }
         }
         // BOM 에 없는(직접 관리하던) 좌표는 constraint 로 버전을 고정해 집계 해석을 보장.
@@ -94,6 +132,22 @@ subprojects {
                     add(bucket, "dev.samstevens.totp:totp:1.7.1")
                     add(bucket, "com.bucket4j:bucket4j_jdk17-core:8.14.0")
                     add(bucket, "com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
+
+                    // ── 보안: Trivy image 게이트(HIGH/CRITICAL, ignore-unfixed)가 잡은
+                    //         고칠 수 있는 transitive CVE 를 fixed 최소 버전으로 상향 ──
+                    // commons-lang3 3.17.0 (Spring Boot BOM 고정) → ClassUtils.getClass 무제한
+                    // 재귀로 StackOverflowError(DoS). 3.18.0 에서 수정.
+                    add(bucket, "org.apache.commons:commons-lang3:3.18.0") {
+                        because("CVE-2025-48924: uncontrolled recursion in ClassUtils, fixed in 3.18.0")
+                    }
+                    // nimbus-jose-jwt — adapter-out 이 9.40 직접 선언하나 SAS/oauth2-jose transitive
+                    // 가 9.47 로 끌어올림. 9.47 은 advisory vulnerable 범위에 있고, 9.x 패치
+                    // 라인(9.37.4)은 9.47 보다 낮아 다운그레이드라 부적합 → 다음 fixed 인 10.0.2 로.
+                    // 사용 API(JWK/JWKSet/RSAKey/RSAKeyGenerator/SignedJWT/DefaultJWTProcessor 등)는
+                    // 9.x→10.x 에서 호환(10.x 는 Java 11+ 요구, 본 프로젝트 JDK21 충족).
+                    add(bucket, "com.nimbusds:nimbus-jose-jwt:10.0.2") {
+                        because("CVE-2025-53864: uncontrolled recursion via deeply nested JSON claim, fixed in 10.0.2")
+                    }
                 }
             }
         }
