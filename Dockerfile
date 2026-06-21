@@ -1,7 +1,7 @@
 # --- Build stage ---
 # 베이스 이미지는 digest 로 고정 — 동일 태그가 가리키는 이미지가 바뀌어도 재현 가능한 빌드 보장.
 # 태그 주석은 사람이 읽기 위한 것이며, dependabot(docker) 가 digest 를 갱신한다.
-FROM eclipse-temurin:21-jdk-alpine@sha256:4fb80de7aeb277ad949cfbe89b4f504e50bb34c57fd908c5825236473d71e986 AS build
+FROM eclipse-temurin:25-jdk-alpine@sha256:30d9f87d702c2c1c601ed0d31e0c88ea1ea474ee7676cda7b7a59e759181c4dd AS build
 WORKDIR /workspace
 COPY gradle gradle
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
@@ -17,7 +17,7 @@ COPY . .
 RUN ./gradlew --no-daemon :auth-bootstrap:bootJar -x test
 
 # --- Runtime stage ---
-FROM eclipse-temurin:21-jre-alpine@sha256:704db3c40204a44f471191446ddd9cda5d60dab40f0e15c6507b815ed897238b AS runtime
+FROM eclipse-temurin:25-jre-alpine@sha256:c707c0d18cb9e8556380719f80d96a7529d0746fbb42143893949b98ed2f8943 AS runtime
 
 # OCI image labels — 출처 / 라이선스 / 리비전 추적. revision/created 는 빌드 시 주입.
 ARG VCS_REF=unknown
