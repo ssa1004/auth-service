@@ -25,6 +25,7 @@ updates:
           - "io.spring.dependency-management"
 
   # GitHub Actions — ci.yml / codeql.yml 의 actions 핀 버전.
+  # SHA 로 핀되어 있어도 dependabot 은 주석의 태그를 읽어 최신 SHA 로 갱신한다.
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -40,3 +41,21 @@ updates:
       - ssa1004
     commit-message:
       prefix: "ci"
+
+  # Docker — Dockerfile 의 digest-pin 된 베이스 이미지 (eclipse-temurin).
+  # 베이스 OS / JRE 의 보안 패치를 digest 갱신으로 반영.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - docker
+    reviewers:
+      - ssa1004
+    commit-message:
+      prefix: "build(deps)"
