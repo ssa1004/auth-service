@@ -16,7 +16,7 @@ rotation, refresh-token rotation with reuse detection, RBAC, multi-tenancy,
 TOTP-based 2FA, token introspection/revocation, and append-only audit into one
 deployable.
 
-- **Stack** — Kotlin · Spring Boot 3.4 · JVM 21 toolchain · Spring Authorization Server 1.4
+- **Stack** — Kotlin · Spring Boot 3.5 · JVM 21 toolchain · Spring Authorization Server 1.5
 - **Storage** — Postgres + Flyway + JPA · Redis (refresh reuse detection, rate limit, MFA challenge)
 - **Architecture** — Hexagonal (ports & adapters), 6 Gradle modules
 - **Decisions** — 18 ADRs in [`docs/adr`](docs/adr)
@@ -110,7 +110,7 @@ OAuth2 / OIDC IdP. 다른 internal service 들이 JWT 를 검증하는 consumer 
 JWT 를 발행하는 issuer 입니다. JWT 발행, JWK rotation, refresh token rotation, RBAC,
 multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
 
-- Kotlin / Spring Boot 3.4 / JVM 21 toolchain / Spring Authorization Server 1.4
+- Kotlin / Spring Boot 3.5 / JVM 21 toolchain / Spring Authorization Server 1.5
 - Postgres + Flyway + JPA / Redis (refresh reuse 감지, rate limit, MFA challenge)
 - 헥사고날 (ports & adapters) + 모듈 6개
 - ADR 18개로 핵심 결정 정리 ([docs/adr](docs/adr)) — RBAC + ABAC (OPA), JWK rotation, Refresh
@@ -148,7 +148,7 @@ multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
 
 ## 핵심 패턴
 
-- **Spring Authorization Server 1.4** — `/oauth2/token`, `/oauth2/jwks`,
+- **Spring Authorization Server 1.5** — `/oauth2/token`, `/oauth2/jwks`,
   `/.well-known/openid-configuration` 자동 노출. 자체 first-party endpoint
   (`/api/v1/auth/*`) 와 공존.
 - **JWK rotation** — RS256 / RSA 2048. 24h cycle + previous 키 1 cycle grace ([ADR-0003](docs/adr/0003-jwk-rotation-strategy.md))
