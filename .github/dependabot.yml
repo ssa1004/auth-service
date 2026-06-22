@@ -2,10 +2,11 @@ version: 2
 updates:
   # Gradle 의존성 — Spring Boot / Security / Authorization Server / bucket4j 등.
   # 멀티모듈이지만 버전 관리가 루트 build.gradle.kts 한 곳에 모여 있어 directory: "/" 로 충분.
+  # 알림 최소화: 월 1회만 검사하고, 모든 gradle 업데이트를 하나의 PR 로 묶는다.
   - package-ecosystem: gradle
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
       time: "09:00"
       timezone: Asia/Seoul
@@ -18,18 +19,18 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
-      # Spring 생태계는 BOM 으로 함께 올라가야 하므로 한 PR 로 묶음.
-      spring:
+      # 모든 gradle 의존성을 한 PR 로 묶어 PR / 메일 폭주를 막는다.
+      gradle-all:
         patterns:
-          - "org.springframework*"
-          - "io.spring.dependency-management"
+          - "*"
 
   # GitHub Actions — ci.yml / codeql.yml 의 actions 핀 버전.
   # SHA 로 핀되어 있어도 dependabot 은 주석의 태그를 읽어 최신 SHA 로 갱신한다.
+  # 알림 최소화: 월 1회만 검사하고, 모든 actions 업데이트를 하나의 PR 로 묶는다.
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
       time: "09:00"
       timezone: Asia/Seoul
@@ -41,13 +42,19 @@ updates:
       - ssa1004
     commit-message:
       prefix: "ci"
+    groups:
+      # 모든 github-actions 업데이트를 한 PR 로 묶는다.
+      github-actions-all:
+        patterns:
+          - "*"
 
   # Docker — Dockerfile 의 digest-pin 된 베이스 이미지 (eclipse-temurin).
   # 베이스 OS / JRE 의 보안 패치를 digest 갱신으로 반영.
+  # 알림 최소화: 월 1회만 검사하고, 모든 docker 업데이트를 하나의 PR 로 묶는다.
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
       time: "09:00"
       timezone: Asia/Seoul
@@ -59,3 +66,8 @@ updates:
       - ssa1004
     commit-message:
       prefix: "build(deps)"
+    groups:
+      # 모든 docker 베이스 이미지 업데이트를 한 PR 로 묶는다.
+      docker-all:
+        patterns:
+          - "*"
