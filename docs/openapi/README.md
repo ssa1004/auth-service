@@ -10,33 +10,44 @@
   - Spring Authorization Server 가 노출하는 OAuth2 / OIDC endpoint
     (`/oauth2/token`, `/oauth2/jwks`, `/.well-known/openid-configuration`)
 
-> 이 디렉토리의 `*.yaml` 은 CI 에서 생성·갱신된다. 로컬에서 수기로 편집하지 않는다.
+> 이 디렉토리의 `auth-service.yaml` 은 코드(controller / `OpenApiConfig`)에서 생성된 산출물이다.
+> 로컬에서 수기로 편집하지 않는다 — 손으로 고친 spec 은 코드와 어긋난다.
 >
-> **현재 상태**: `auth-service.yaml` 는 앱 부팅(Postgres / Redis 필요)을 거쳐야만
-> 진실되게 생성되므로 레포에 미리 commit 해 두지 않는다. 아래 "생성 방법" 의 명령으로
-> 의존 인프라를 띄운 뒤 직접 산출하거나, CI 의 `generateOpenApiDocs` 결과를 참조한다.
-> (손으로 작성한 spec 은 코드와 어긋날 수 있어 두지 않는다.)
+> **현재 상태**: `auth-service.yaml` 가 레포에 commit 되어 있다. CI 의 drift 게이트
+> (`.github/workflows/ci.yml` 의 `openapi-spec` job)가 매 push/PR 마다 아래 "생성 방법" 으로
+> spec 을 재생성하고 `git diff --exit-code` 로 commit 된 파일과 비교한다 — 코드가 바뀌었는데
+> spec 을 갱신하지 않으면 CI 가 실패한다.
 
 ## 생성 방법
 
-`org.springdoc.openapi-gradle-plugin` 을 `auth-bootstrap` 모듈에 적용했다.
-`generateOpenApiDocs` 태스크가 앱을 부팅한 뒤 `/v3/api-docs.yaml` 을 받아
-`docs/openapi/auth-service.yaml` 로 저장한다.
+외부 인프라 ZERO 의 `dev` 프로파일로 앱을 부팅한 뒤 (`application-dev.yml` — H2 in-memory,
+in-memory rate limiter, Redis/SMTP health 비활성), springdoc 이 노출한 `/v3/api-docs` (JSON)
+를 받아 `yq` 로 YAML 로 변환해 `docs/openapi/auth-service.yaml` 로 저장한다. Postgres / Redis
+/ Docker 가 필요 없다.
 
 ```bash
-./gradlew :auth-bootstrap:generateOpenApiDocs
+./scripts/gen-openapi.sh
 ```
 
-앱 부팅에 Postgres / Redis 가 필요하므로, 의존 인프라를 먼저 띄워야 한다.
+스크립트가 하는 일:
 
 ```bash
-# 예: docker compose 로 의존 인프라 기동 후 spec 생성
-docker compose -f infrastructure/docker/docker-compose.yml up -d postgres redis
-./gradlew :auth-bootstrap:generateOpenApiDocs
+# 1. dev 프로파일로 부팅 (free port)
+./gradlew :auth-bootstrap:bootRun --args='--spring.profiles.active=dev --server.port=18080'
+# 2. /actuator/health 가 UP 이 될 때까지 polling
+# 3. springdoc JSON 을 받아 YAML 로 변환
+curl -fsS http://localhost:18080/v3/api-docs | yq -P -o=yaml '.' > docs/openapi/auth-service.yaml
+# 4. 앱 종료
 ```
 
-CI 에서는 service container (Postgres / Redis) 를 띄운 잡에서 위 태스크를 실행해
-산출된 yaml 을 commit 하거나 아티팩트로 업로드한다.
+> 참고: springdoc 의 native YAML endpoint(`/v3/api-docs.yaml`)는 `SecurityConfig` 의 public
+> matcher(`/v3/api-docs/**`)가 `.yaml` 형제 경로를 안 덮어 403 이다. 그래서 permit 된 JSON
+> endpoint(`/v3/api-docs`)를 받아 `yq` 로 변환한다 — e2e `OpenApiSpecE2eTest` 도 같은 JSON
+> endpoint 를 검증한다. (build-time export 용 `org.springdoc.openapi-gradle-plugin` 의
+> `generateOpenApiDocs` 태스크는 `.yaml` 을 fetch 하므로 같은 이유로 현재는 쓰지 않는다.)
+
+CI 에서는 동일 스크립트를 `dev` 프로파일로 실행해 spec 을 재생성하고 commit 된 파일과
+비교한다(drift 게이트). service container 가 필요 없다.
 
 ## 보는 법
 

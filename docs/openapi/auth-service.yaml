@@ -1,0 +1,512 @@
+openapi: 3.0.1
+info:
+  title: auth-service
+  description: |-
+    OAuth2 / OIDC IdP — JWT 발행 + JWK rotation + refresh rotation +
+    RBAC + ABAC (OPA) + MFA TOTP + audit. RFC 7662 / 7009 표준 endpoint
+    포함. 자세한 설계 결정은 docs/adr 참조.
+
+    보안 스킴:
+    - bearerAuth: 자체 발행 access JWT. /api/v1/me/**, /api/v1/admin/** 호출 시.
+    - clientBasic: client_credentials 의 client_id:client_secret. /oauth2/introspect,
+      /oauth2/revoke 호출 시 — 외부에 임의 토큰 introspect 노출 차단.
+  contact:
+    name: auth-service maintainers
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+    description: Configured issuer URL
+tags:
+  - name: auth
+    description: 회원가입 / 로그인 / refresh / MFA 검증
+  - name: session
+    description: 내 세션 목록 / revoke (자기 자신)
+  - name: admin
+    description: 운영자 전용 endpoint (RBAC + ABAC)
+  - name: oauth2
+    description: RFC 7662 introspection / RFC 7009 revocation
+paths:
+  /oauth2/revoke:
+    post:
+      tags:
+        - oauth2
+      summary: RFC 7009 Token Revocation (admin)
+      description: "\n            운영자 / 보안 콘솔이 사용자의 access JWT 또는 refresh token 을 강제 종료.\n            호출 client 가 token.revoke scope 를 가져야 OPA 의 auth/token/revoke 정책을\n            통과합니다 (일반 service client 는 거부).\n\n            RFC 7009 §2.2 — 알 수 없는 token / 만료된 token / 다른 client 의 token\n            모두 응답은 항상 200 (정보 누설 차단). 다만 권한 자체가 없는 호출은\n            §2.2.1 의 unauthorized_client 처럼 403 으로 거부.\n            "
+      operationId: revoke
+      parameters:
+        - name: token
+          in: query
+          description: 강제 종료할 access JWT 또는 refresh token (평문)
+          required: true
+          schema:
+            type: string
+        - name: token_type_hint
+          in: query
+          description: RFC 7009 §2.1 의 hint — access_token | refresh_token
+          required: false
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RevokeForm'
+        required: true
+      responses:
+        "401":
+          description: client_credentials Basic 인증 실패
+        "403":
+          description: token.revoke scope 미보유 (OPA 거부)
+        "200":
+          description: RFC 7009 §2.2 — 항상 200, body 비어있음
+      security:
+        - clientBasic: []
+  /oauth2/introspect:
+    post:
+      tags:
+        - oauth2
+      summary: RFC 7662 Token Introspection
+      description: "\n            Resource Server 가 access / refresh 토큰의 유효성을 본 IdP 에 직접 묻는\n            표준 endpoint. 응답 본문은 RFC 7662 §2.2 의 표준 필드 — active, scope,\n            client_id, sub, exp, iat, token_type 등. token 형식이 잘못됐거나 알 수\n            없는 token 이면 정보 누설 없이 {\"active\":false} 만 반환.\n\n            호출자는 client_credentials grant 로 인증된 client 만 허용 — 외부에 임의\n            토큰 introspect 를 노출하면 token oracle 이 됩니다 (공격자가 훔친 토큰의\n            유효성을 자유롭게 검증).\n            "
+      operationId: introspect
+      parameters:
+        - name: token
+          in: query
+          description: 검증할 access JWT 또는 refresh token (평문)
+          required: true
+          schema:
+            type: string
+        - name: token_type_hint
+          in: query
+          description: RFC 7662 §2.1 의 hint — access_token | refresh_token
+          required: false
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IntrospectForm'
+        required: true
+      responses:
+        "200":
+          description: RFC 7662 §2.2 응답 — active=true 시 표준 + 커스텀 필드, false 시 active 만
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        "401":
+          description: client_credentials Basic 인증 실패
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+      security:
+        - clientBasic: []
+  /api/v1/auth/verify-mfa:
+    post:
+      tags:
+        - auth
+      summary: MFA TOTP 검증
+      description: /login 응답의 mfaToken 과 6자리 TOTP 코드로 본 인증을 완료. challenge 토큰은 1회 consume.
+      operationId: verifyMfa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyMfaRequest'
+        required: true
+      responses:
+        "429":
+          description: rate limit (IP 당 login-rate-burst 초과 — TOTP 추측 brute-force 차단)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "400":
+          description: 코드 불일치 / 만료된 challenge / 이미 consume 된 challenge
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "200":
+          description: 성공 — access + refresh 발급
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /api/v1/auth/register:
+    post:
+      tags:
+        - auth
+      summary: 회원가입
+      description: tenant + email + password 로 사용자 생성. password 는 BCrypt cost=12 로 해시.
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      responses:
+        "400":
+          description: validation 실패 (email 형식 / password 길이 12-128 등)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        "429":
+          description: rate limit (login-rate-burst 초과 — bot 자동 가입 차단)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        "201":
+          description: 생성 성공 — userId 반환
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        "409":
+          description: 이미 등록된 email
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+        - auth
+      summary: Refresh token 회전
+      description: "\n            refresh rotation + reuse detection. 회전된 token 이 다시 들어오면 모든\n            세션을 강제 revoke. 같은 IP 의 mobile retry 보호용 grace window 5초\n            (auth.refresh-reuse-grace-period) 가 적용됩니다.\n            "
+      operationId: refresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+        required: true
+      responses:
+        "429":
+          description: rate limit (IP 당 login-rate-burst 초과 — brute-force / DoS 차단)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "200":
+          description: 성공 — 새 access + 새 refresh 발급
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "401":
+          description: 유효하지 않거나 이미 회전된 token (reuse 감지 시 사용자의 모든 세션 revoke)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /api/v1/auth/login:
+    post:
+      tags:
+        - auth
+      summary: 로그인
+      description: "\n            bad credentials / locked / not-found 모두 동일 응답으로 정보 누설 차단.\n            MFA 활성 사용자는 401 + X-Mfa-Required 헤더 + body 의 mfaToken 으로 응답\n            — 호출자는 mfaToken 을 /verify-mfa 에 전달.\n            "
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        "401":
+          description: bad credentials 또는 MFA 필요 (헤더로 구분)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "429":
+          description: rate limit (login-rate-burst 초과)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "200":
+          description: 성공 — access + refresh 발급
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /api/v1/admin/users/{userId}/roles:
+    post:
+      tags:
+        - admin
+      summary: 사용자에 role 부여
+      description: "\n            PERMISSION_admin:write 가 JWT 의 권한에 포함되어야 호출 가능. 추가로\n            OPA 의 auth/role/assign 정책이 cross-tenant / admin role escalation 을\n            검증합니다 (admin role 부여는 senior_admin 만, cross-tenant 는 global_admin 만).\n            "
+      operationId: assignRole
+      parameters:
+        - name: actor
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AuthenticatedUser'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleRequest'
+        required: true
+      responses:
+        "401":
+          description: Bearer JWT 누락 / 만료
+        "204":
+          description: 성공
+        "403":
+          description: PERMISSION_admin:write 부족 또는 OPA 정책 거부
+      security:
+        - bearerAuth: []
+  /api/v1/me/sessions:
+    get:
+      tags:
+        - session
+      summary: 내 세션 목록
+      description: 현재 사용자의 활성 refresh 토큰 (디바이스 / IP / 마지막 사용 시각).
+      operationId: list
+      parameters:
+        - name: me
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AuthenticatedUser'
+      responses:
+        "200":
+          description: 성공
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionResponse'
+        "401":
+          description: Bearer JWT 누락 / 만료
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionResponse'
+      security:
+        - bearerAuth: []
+  /api/v1/me/sessions/{sessionId}:
+    delete:
+      tags:
+        - session
+      summary: 내 세션 revoke
+      description: 특정 세션을 즉시 종료 (해당 refresh 토큰을 REVOKED 마킹).
+      operationId: revoke_1
+      parameters:
+        - name: me
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AuthenticatedUser'
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "403":
+          description: 본인 세션이 아님 (OPA tenant/owner 정책 위반)
+        "401":
+          description: Bearer JWT 누락 / 만료
+        "204":
+          description: 성공
+      security:
+        - bearerAuth: []
+components:
+  schemas:
+    RevokeForm:
+      required:
+        - token
+      type: object
+      properties:
+        token:
+          type: string
+          description: 강제 종료할 token
+        token_type_hint:
+          type: string
+          description: access_token | refresh_token
+          example: refresh_token
+      description: RFC 7009 revocation request body
+    IntrospectForm:
+      required:
+        - token
+      type: object
+      properties:
+        token:
+          type: string
+          description: 검증할 token
+        token_type_hint:
+          type: string
+          description: access_token | refresh_token
+          example: access_token
+      description: RFC 7662 introspection request body
+    VerifyMfaRequest:
+      required:
+        - code
+        - mfaToken
+      type: object
+      properties:
+        mfaToken:
+          type: string
+        code:
+          type: string
+        deviceLabel:
+          type: string
+    TokenResponse:
+      required:
+        - expiresIn
+        - refreshExpiresIn
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+        refreshExpiresIn:
+          type: integer
+          format: int64
+        mfaToken:
+          type: string
+    RegisterRequest:
+      required:
+        - email
+        - password
+        - tenantSlug
+      type: object
+      properties:
+        tenantSlug:
+          type: string
+        email:
+          type: string
+        password:
+          maxLength: 128
+          minLength: 12
+          type: string
+        deviceLabel:
+          type: string
+    RegisterResponse:
+      required:
+        - userId
+      type: object
+      properties:
+        userId:
+          type: string
+    RefreshRequest:
+      required:
+        - refreshToken
+      type: object
+      properties:
+        refreshToken:
+          type: string
+    LoginRequest:
+      required:
+        - email
+        - password
+        - tenantSlug
+      type: object
+      properties:
+        tenantSlug:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        deviceLabel:
+          type: string
+    AuthenticatedUser:
+      required:
+        - tenantId
+        - userId
+      type: object
+      properties:
+        userId:
+          $ref: '#/components/schemas/UserId'
+        tenantId:
+          $ref: '#/components/schemas/TenantId'
+    TenantId:
+      required:
+        - value
+      type: object
+      properties:
+        value:
+          type: string
+          format: uuid
+    UserId:
+      required:
+        - value
+      type: object
+      properties:
+        value:
+          type: string
+          format: uuid
+    AssignRoleRequest:
+      required:
+        - roleId
+      type: object
+      properties:
+        roleId:
+          type: string
+          format: uuid
+    SessionResponse:
+      required:
+        - expiresAt
+        - issuedAt
+        - sessionId
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        deviceLabel:
+          type: string
+        ipAddress:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: 자체 발행 access JWT — RS256, 15분 유효, JWK rotation 24h.
+      scheme: bearer
+      bearerFormat: JWT
+    clientBasic:
+      type: http
+      description: 'RFC 6749 client_credentials — Authorization: Basic base64(client_id:secret)'
+      scheme: basic
