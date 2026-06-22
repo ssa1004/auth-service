@@ -25,7 +25,7 @@ dependencies {
 
     // OpenAPI — Spring Boot 3.4 / Spring 6.2 와 ControllerAdviceBean signature 호환되는 2.7.0+ 필수.
     // 2.6.0 은 NoSuchMethodError 발생 (GenericResponseService 가 6.1 시그니처 호출).
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     // Tracing / Metrics
     implementation("io.micrometer:micrometer-tracing")
@@ -41,7 +41,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     // Mockito Kotlin helpers — any() / whenever / verify 의 Kotlin friendly DSL.
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
 }
 
 kotlin {
