@@ -31,6 +31,12 @@ class LoginService(
     private val properties: AuthProperties,
 ) : LoginUseCase {
 
+    /**
+     * 사용자 미존재 / 계정 잠금 / 비밀번호 불일치 — 세 갈래의 실패는 *의도적으로* 모두
+     * 동일한 [InvalidCredentialsException] (401) 로 수렴합니다. 분기를 다르게 노출하면
+     * 공격자가 응답 차이를 oracle 삼아 계정 enumeration / 잠금 상태 probing 을 할 수 있어
+     * 막는 것 (OWASP). 실제 실패 사유는 audit 에만 reason 으로 남깁니다.
+     */
     @Transactional
     override fun login(cmd: LoginUseCase.Command): AuthTokens {
         val tenant = tenantRepository.findBySlug(cmd.tenantSlug)
