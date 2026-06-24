@@ -38,3 +38,10 @@ OAuth2 표준 endpoint (`/oauth2/token`, `/oauth2/jwks`,
   변경의 PR diff 가 monolith 보다 늘어납니다.
 - (단점) Spring AS 의 표준 동작과 자체 first-party 흐름이 같은 앱 안에 공존하므로
   `SecurityFilterChain` order 가 헷갈리기 쉽습니다 (ADR-0006 에서 명시적으로 분리).
+
+## 용어 풀이 (쉽게)
+
+- **헥사고날 아키텍처 (port/adapter)** — 핵심 업무 로직을 가운데 두고 DB·Redis·웹·라이브러리는 콘센트(port)와 플러그(adapter)로만 연결하는 구조. 라이브러리를 바꿔도 플러그만 갈아끼우면 돼서 핵심 코드는 안 건드린다.
+- **issuer vs consumer (IdP)** — issuer는 신분증(JWT)을 직접 '발급'하는 기관, consumer는 받은 신분증이 진짜인지 '검증'만 하는 쪽. auth-service는 포트폴리오에서 유일하게 토큰을 찍어내는 발급처다.
+- **JWS / 자체 JWS 발행기** — JWT에 위변조 방지용 서명을 박는 표준(JSON Web Signature). Spring 라이브러리가 해주던 서명을 직접 구현으로 바꾸는 것이 '자체 JWS 발행기'.
+- **SecurityFilterChain (필터 체인)** — 들어온 요청을 인증·인가 규칙으로 차례차례 검사하는 Spring Security의 검문소 줄. 표준 endpoint용과 자체 endpoint용을 별도 줄로 나눠 순서가 안 꼬이게 한다.

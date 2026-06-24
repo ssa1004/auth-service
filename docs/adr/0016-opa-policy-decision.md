@@ -145,3 +145,12 @@ OPA 호출 자체가 실패 (네트워크 / 정책 syntax error / 타임아웃) 
 - ADR (예정): OPA bundle 자동 배포 — 정책 git repo + S3 + OPA polling
 - ADR (예정): 정책 회귀 테스트 — 정책 변경 시 decision log 가 deny → allow 로 바뀐 케이스 자동 검출
 - ADR (예정): Token Introspection (RFC 7662) + Token Revocation (RFC 7009) — admin 이 즉시 revoke 가능한 endpoint
+
+## 용어 풀이 (쉽게)
+
+- **OPA (Open Policy Agent)** — 권한 판단 규칙을 코드 밖 별도 파일로 빼서, 코드는 'OPA야 이거 허용해도 돼?'라고 묻기만 하게 해주는 표준 정책 엔진. 규칙이 바뀌어도 코드 재배포 없이 정책 파일만 고치면 된다.
+- **Rego** — OPA가 쓰는 규칙 전용 언어. if문을 코드 곳곳에 흩뿌리는 대신 '본인 자원이면 허용, admin이면 허용' 같은 규칙을 이 언어로 한곳에 모아 쓴다.
+- **PDP (Policy Decision Point, 정책 결정 창구)** — '허용/거부'만 전담으로 답하는 단일 심판 창구. 권한 판단을 한 곳에 모아 전체 권한 모델을 한눈에 보고 감사하기 쉽게 한다.
+- **embedded vs sidecar** — embedded는 정책 엔진을 앱 안에 같이 넣어 가볍게 돌리는 방식(외부 의존 0), sidecar는 같은 pod 옆에 OPA 데몬을 따로 띄워 정책을 git/S3에서 자동으로 받아 갱신(hot reload)하는 운영용 방식.
+- **fail-closed (실패 시 거부)** — 정책 엔진이 고장(끊김·문법 오류·타임아웃)나면 일단 '거부'로 처리하는 안전 원칙. '확실하지 않으면 문을 잠근다'. 정책 장애가 권한 우회로 번지지 않게 한다.
+- **defense-in-depth (다중 방어)** — 방어선을 한 겹만 두지 않고 RBAC(1차, 토큰 claim) → ABAC/OPA(2차) 처럼 여러 겹을 쌓는 것. 한 겹이 뚫려도 다음 겹이 막는다.

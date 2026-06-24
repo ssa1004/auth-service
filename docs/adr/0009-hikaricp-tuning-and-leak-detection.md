@@ -46,3 +46,12 @@ Hikari 는 Spring Boot 가 기본 풀러로 깔아줍니다. 하지만 `maximum-
 - 인스턴스 수가 4대 넘어 PostgreSQL `max_connections` 부담 → PgBouncer.
 - p99 latency 가 풀 idle 패턴과 상관 → `connectionInitSql` 로 session 단위 튜닝.
 - 트래픽 스파이크에 풀이 한 번씩 마름 → maximum-pool-size 재산정 (또는 풀러 분리).
+
+## 용어 풀이 (쉽게)
+
+- **HikariCP / 커넥션 풀** — DB 연결을 미리 여러 개 만들어 두고 빌려주는 '연결 대여소'. 매번 새로 연결하면 느려서, 만들어둔 걸 빌려 쓰고 반납한다.
+- **풀 고갈 (pool exhaustion)** — 빌려줄 연결이 동나 새 요청이 줄 서다 다 멈추는 것. 공유 우산 대여함이 텅 비면 비 맞고 기다리는 셈. 연쇄 장애의 시작점.
+- **connection leak (연결 누수)** — 빌린 연결을 반납(close)하지 않아 조용히 사라지는 것. 평소엔 안 보이다가 부하가 오르면 갑자기 풀이 마른다. leak detection은 30초 넘게 안 돌려준 범인을 로그로 찍어준다.
+- **stale connection (끊긴 연결)** — DB가 오래 안 쓴 연결을 먼저 끊었는데 풀엔 그 죽은 연결이 남아 있어, 다음 쿼리에서 터지는 것. max-lifetime을 DB의 idle timeout보다 짧게 잡아 미리 폐기한다.
+- **fail-fast (빠른 실패)** — 풀이 마르면 30초씩 기다리지 않고 3초 만에 바로 실패시키는 것. 오래 묶여 다른 서비스까지 같이 쓰러지는 걸 막는다.
+- **PgBouncer** — 여러 앱 인스턴스가 DB에 연결을 너무 많이 열 때, 앞단에 두고 연결을 더 잘게 모아 재사용해주는 별도 연결 풀러.

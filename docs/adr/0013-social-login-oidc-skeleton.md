@@ -57,3 +57,10 @@ V3 마이그레이션 — `external_identities` 테이블:
 - multi-tenant 가 본격화되면 redirect URI 에 tenantSlug 를 포함 (`/oauth2/authorization/{tenant}/google`).
 - IdP 응답에 이메일이 없는 케이스 (GitHub privacy 설정) → 사용자에게 추가 입력 흐름.
 - `AuditEventType.OIDC_LINKED` / `OIDC_AUTO_REGISTERED` 별도 enum 추가 (현재는 USER_REGISTERED 재사용).
+
+## 용어 풀이 (쉽게)
+
+- **OIDC (OpenID Connect)** — 'Google 계정으로 로그인' 같은 걸 표준으로 만든 규약. 우리 서비스가 비밀번호를 직접 받지 않고, 구글이 대신 본인 확인을 해주고 그 결과를 받아온다.
+- **IdP (Identity Provider, 신원 공급자)** — 신분 확인을 대신 해주는 외부 기관(여기선 Google·Microsoft·GitHub). 사용자는 거기에 로그인하고 우리는 그 결과만 믿는다.
+- **sub (subject 클레임)** — IdP가 사용자마다 매기는 '절대 안 바뀌는 고유 번호'. 이메일은 사용자가 바꿀 수 있어 매핑 키로 부적합해서, 변하지 않는 sub를 진짜 기준으로 삼는다.
+- **link / 자동 가입 (account linking)** — 같은 이메일의 기존 사용자가 있으면 새 계정을 또 만들지 않고 그 사용자에 'Google 계정 매핑'만 덧붙이는 것. 한 사람이 비밀번호·OIDC 둘 다 쓸 수 있게 된다.

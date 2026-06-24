@@ -55,3 +55,9 @@ liveness:
 - p99 가 readiness 토글 직후 잠깐 튐 → graceful drain 시간 조정.
 - 외부 의존이 더 늘면 (Kafka / 외부 IdP) coordinator 에 contributor 추가.
 - KMS 도입 후 JWK 키 미생성 케이스가 빈번해지면 startup probe failure threshold 조정.
+
+## 용어 풀이 (쉽게)
+
+- **probe (상태 점검)** — 쿠버네티스가 컨테이너 안부를 주기적으로 묻는 검사. startup(부팅 다 됐어?), readiness(손님 받아도 돼?), liveness(살아는 있어?) 세 종류로 역할을 나눈다.
+- **liveness에 외부 의존을 안 넣는 이유** — liveness가 실패하면 컨테이너를 재시작하는데, 여기에 DB·Redis 상태를 넣으면 DB가 잠깐 흔들렸을 때 멀쩡한 pod들까지 줄줄이 재시작돼 장애가 더 커진다. 그래서 liveness는 '나 자신만' 본다.
+- **ReadinessState (트래픽 수용 상태)** — 'ACCEPTING_TRAFFIC(받음) ↔ REFUSING_TRAFFIC(거부)'를 오가는 깃발. 의존이 죽으면 거부로 바꿔 쿠버네티스가 이 pod로 손님을 안 보내게 하고, 회복되면 자동으로 다시 받음으로 돌린다.
