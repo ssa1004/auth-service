@@ -112,9 +112,9 @@ multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
 
 - Kotlin / Spring Boot 3.5 / JVM 21 toolchain / Spring Authorization Server 1.5
 - Postgres + Flyway + JPA / Redis (refresh reuse 감지, rate limit, MFA challenge)
-- 헥사고날 (ports & adapters) + 모듈 6개
+- 헥사고날 (ports & adapters)(= 핵심 로직을 가운데 두고 DB·Redis·웹은 콘센트(port)·플러그(adapter)로만 연결해, 바깥을 바꿔도 핵심 코드는 안 건드리는 구조) + 모듈 6개
 - ADR 18개로 핵심 결정 정리 ([docs/adr](docs/adr)) — RBAC + ABAC (OPA), JWK rotation, Refresh
-  reuse detection (+ grace), 2FA TOTP, Audit append-only, RFC 7662 Introspection,
+  reuse detection (+ grace)(= 장기 출입증을 쓸 때마다 새것으로 바꾸고, 이미 버린 옛것이 다시 들어오면 탈취로 의심해 그 사용자 세션을 전부 끊되, 회전 직후 5초·같은 IP 재시도는 정상 모바일로 봐주는 것), 2FA TOTP, Audit append-only, RFC 7662 Introspection,
   RFC 7009 Revocation 등
 
 ---
@@ -442,7 +442,7 @@ k6 run load/k6/scenarios/token-issue.js
 | [0009](docs/adr/0009-hikaricp-tuning-and-leak-detection.md) | HikariCP 튜닝 + leak detection |
 | [0010](docs/adr/0010-k8s-three-probes-and-readiness-coordinator.md) | K8s 3종 probe + readiness coordinator |
 | [0011](docs/adr/0011-graceful-shutdown.md) | Graceful shutdown — SIGTERM 처리 |
-| [0012](docs/adr/0012-audit-siem-outbox.md) | Audit log SIEM 아웃박스 |
+| [0012](docs/adr/0012-audit-siem-outbox.md) | Audit log SIEM 아웃박스(= 보안 감사 기록을, 보낼 메시지를 같은 트랜잭션 안 '편지함' 테이블에 같이 적고 일꾼이 꺼내 보안 로그 분석 시스템(SIEM)으로 흘려보내 한쪽만 성공하는 사고를 막는 방식) |
 | [0013](docs/adr/0013-social-login-oidc-skeleton.md) | Social login (OIDC) skeleton |
 | [0014](docs/adr/0014-key-material-source-abstraction.md) | JWK 외부 KMS 추상화 |
 | [0015](docs/adr/0015-refresh-reuse-grace-window.md) | Refresh reuse 의 grace window |

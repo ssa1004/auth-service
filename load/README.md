@@ -11,7 +11,7 @@ OAuth2 표준 endpoint + first-party `/api/v1/auth/*` 흐름을 대상으로 합
 | `scenarios/token-introspect.js` | `POST /oauth2/introspect` (RFC 7662) | constant 1000 req/s, 1m | Read-heavy. Redis introspect 캐시 적중률 |
 | `scenarios/jwks-fetch.js` | `GET /oauth2/jwks` | constant 2000 req/s, 30s | 정적 응답 + JWK Set 캐싱 효과 |
 | `scenarios/login-refresh.js` | `POST /auth/login` → `POST /auth/refresh` | ramping 0 → 100 VU, 3m | end-user 흐름. login + refresh rotation latency |
-| `scenarios/refresh-reuse-detection.js` | `POST /auth/refresh` (의도적 reuse) | shared-iterations, 1 VU | ADR-0004 invariant — 두 번째 사용은 401 + family revoke |
+| `scenarios/refresh-reuse-detection.js` | `POST /auth/refresh` (의도적 reuse) | shared-iterations, 1 VU | ADR-0004 invariant — 두 번째 사용은 401 + family revoke(= 이미 회전돼 버려진 옛 출입증이 다시 들어오면 탈취로 의심해 그 사용자의 모든 세션 출입증을 한꺼번에 무효화 — 카드 복제 의심 시 그 사람 카드 전부 정지) |
 
 ## 측정 항목 (OAuth2 특유)
 

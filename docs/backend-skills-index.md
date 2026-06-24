@@ -33,7 +33,7 @@
 | 패턴 | 이 레포 어디서 | 왜 (ADR) | 한 줄 |
 |------|---------------|---------|-------|
 | **RBAC** (User → Role → Permission) | JWT claim 에 `roles` + `permissions` 적재 (`resource:action`) | [ADR-0005](adr/0005-rbac-vs-abac.md) | consumer 가 별도 lookup 없이 `hasAuthority(...)` 한 줄로 인가 결정 |
-| **ABAC — OPA Rego (PDP)** | `auth-application/.../authz/PolicyDecisionPort.kt` ↔ `EmbeddedPolicyDecisionAdapter.kt` / `OpaRestPolicyDecisionAdapter.kt`; 정책은 `policies/*.rego` | [ADR-0016](adr/0016-opa-policy-decision.md) | 정책을 코드 밖으로 — 본인 자원만 / 테넌트 격리 / senior_admin 만 부여 등 상황별 정책을 Rego 로 |
+| **ABAC — OPA Rego (PDP)**(= '역할이 뭐냐' 대신 '본인 자원인가·같은 회사인가' 같은 상황 조건으로 허용 여부를 정하되, 그 규칙을 if문으로 코드에 흩뿌리지 않고 Rego 전용 언어로 빼서 OPA라는 심판(PDP)이 읽어 '허용/거부'만 답하게 한 것) | `auth-application/.../authz/PolicyDecisionPort.kt` ↔ `EmbeddedPolicyDecisionAdapter.kt` / `OpaRestPolicyDecisionAdapter.kt`; 정책은 `policies/*.rego` | [ADR-0016](adr/0016-opa-policy-decision.md) | 정책을 코드 밖으로 — 본인 자원만 / 테넌트 격리 / senior_admin 만 부여 등 상황별 정책을 Rego 로 |
 | **embedded / sidecar 두 모드 + fail-closed** | `auth-bootstrap/.../authz/PolicyDecisionConfig.kt` (`@ConditionalOnProperty`) | ADR-0016 | dev 는 in-process, prod 는 OPA sidecar. 평가 실패는 deny (권한 불확실 시 거절) |
 | **multi-tenant 격리** | JWT `tnt` claim + 모든 query tenant_id 강제, `policies/tenant_isolation.rego` | [ADR-0006](adr/0006-multi-tenant-data-isolation.md) | cross-tenant 접근 차단을 RBAC(claim) + ABAC(정책) 두 단계로 |
 
@@ -64,7 +64,7 @@
 
 | 패턴 | 이 레포 어디서 | 왜 (ADR) | 한 줄 |
 |------|---------------|---------|-------|
-| **헥사고날 (ports & adapters)** | 6개 모듈 — `auth-domain`(Spring 의존 0) / `auth-application`(use case + port) / `auth-adapter-in` / `auth-adapter-out` / `auth-bootstrap` / `e2e-tests` | [ADR-0001](adr/0001-hexagonal-and-spring-authorization-server.md) | 라이브러리 교체(BCrypt→Argon2, Spring AS→자체 JWS)가 adapter 안에서 끝남. 도메인 테스트는 ms 단위 |
+| **헥사고날 (ports & adapters)**(= 핵심 로직을 가운데 두고 바깥세상(DB·Redis·웹)은 콘센트(port)·플러그(adapter)로만 연결해, 화살표가 늘 안쪽 도메인을 향하게 한 구조) | 6개 모듈 — `auth-domain`(Spring 의존 0) / `auth-application`(use case + port) / `auth-adapter-in` / `auth-adapter-out` / `auth-bootstrap` / `e2e-tests` | [ADR-0001](adr/0001-hexagonal-and-spring-authorization-server.md) | 라이브러리 교체(BCrypt→Argon2, Spring AS→자체 JWS)가 adapter 안에서 끝남. 도메인 테스트는 ms 단위 |
 | **HikariCP 튜닝 + leak detection** | DataSource 설정 | [ADR-0009](adr/0009-hikaricp-tuning-and-leak-detection.md) | 커넥션 풀 포화 / 누수 조기 검출 |
 | **K8s 3종 probe + readiness coordinator** | `infrastructure/k8s/`, `helm/auth-service/` | [ADR-0010](adr/0010-k8s-three-probes-and-readiness-coordinator.md) | liveness / readiness / startup 분리로 기동 / 재기동 안정화 |
 | **graceful shutdown (SIGTERM)** | `auth-bootstrap` | [ADR-0011](adr/0011-graceful-shutdown.md) | in-flight 요청 처리 후 종료 — 무중단 배포 |
