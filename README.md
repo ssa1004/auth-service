@@ -182,6 +182,13 @@ multi-tenant, 2FA, audit 를 한 묶음으로 제공합니다.
 > make test    # 전체 검증 (단위 + 통합 + e2e)
 > ```
 
+> 외부 인프라 없이 바로 띄우려면 (zero-infra):
+> ```bash
+> ./gradlew :auth-bootstrap:bootRun --args='--spring.profiles.active=dev'
+> ```
+> `dev` 프로파일(`application-dev.yml`)은 H2 in-memory + Redis/메일 health off +
+> 인메모리 rate-limit 으로, Postgres / Redis / Mailhog 없이 컨텍스트가 뜨고 엔드포인트를 제공합니다.
+
 ```bash
 # 로컬 개발 (Postgres + Redis + Mailhog + auth)
 docker compose -f infrastructure/docker/docker-compose.yml up --build

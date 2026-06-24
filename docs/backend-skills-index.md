@@ -11,7 +11,7 @@
 
 | 패턴 | 이 레포 어디서 | 왜 (ADR) | 한 줄 |
 |------|---------------|---------|-------|
-| **Spring Authorization Server 1.4** | `auth-adapter-in` REST + `auth-bootstrap` 의 `SecurityFilterChain` 조립 | [ADR-0001](adr/0001-hexagonal-and-spring-authorization-server.md) | `/oauth2/token`·`/oauth2/jwks`·`/.well-known/openid-configuration` 자동 노출 + 자체 first-party endpoint 공존 |
+| **Spring Authorization Server 1.5** | `auth-adapter-in` REST + `auth-bootstrap` 의 `SecurityFilterChain` 조립 | [ADR-0001](adr/0001-hexagonal-and-spring-authorization-server.md) | `/oauth2/token`·`/oauth2/jwks`·`/.well-known/openid-configuration` 자동 노출 + 자체 first-party endpoint 공존 |
 | **RS256 JWT 서명** | `auth-adapter-out/.../security/JwkSourceProvider.kt` (Nimbus JOSE) | [ADR-0002](adr/0002-rs256-vs-eddsa.md) | self-contained 토큰 — Resource Server 가 IdP 왕복 없이 검증 |
 | **JWK rotation (24h + 1 cycle grace)** | `auth-bootstrap/.../jwk/JwkRotationScheduler.kt`, `JwkConfig.kt` + `JwkSourceProvider.kt` (`AtomicReference<List<JWK>>`, current+previous) | [ADR-0003](adr/0003-jwk-rotation-strategy.md) | 키 유출 영향 범위를 시간으로 제한. 직전 키 verify-only 유지로 회전 직후 401 폭주 차단 |
 | **key material 외부화 추상화** | `auth-application/.../port/out/KeyMaterialSource.kt` (port) ↔ `LocalFileKeyMaterialSource.kt` / `KmsKeyMaterialSource.kt` (adapter) | [ADR-0014](adr/0014-key-material-source-abstraction.md) | dev 는 파일 영속, prod 는 KMS / Vault. JDK `KeyPair` 만 노출해 도메인이 KMS SDK 비의존 |
