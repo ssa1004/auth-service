@@ -34,7 +34,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: auth-service
-  description: "OAuth2 / OIDC IdP — Spring Authorization Server 1.4, JWK rotation, refresh reuse detection + grace, OPA Rego (ABAC), RFC 7662/7009"
+  description: "OAuth2 / OIDC IdP — Spring Authorization Server 1.5, JWK rotation, refresh reuse detection + grace, OPA Rego (ABAC), RFC 7662/7009"
   annotations:
     github.com/project-slug: ssa1004/auth-service
     backstage.io/source-location: url:https://github.com/ssa1004/auth-service
@@ -85,7 +85,7 @@ spec:
       title: OAuth2 / OIDC Token Endpoint
       version: 1.0.0
       description: |
-        Spring Authorization Server 1.4 기반 토큰 endpoint.
+        Spring Authorization Server 1.5 기반 토큰 endpoint.
         grant_type: authorization_code (PKCE 필수), refresh_token, client_credentials.
     paths:
       /oauth2/token:
