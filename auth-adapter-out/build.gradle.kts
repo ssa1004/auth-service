@@ -34,7 +34,6 @@ dependencies {
 
     // RFC 7662 introspection 시 자체 발행 access JWT 를 디코드 — JwtDecoder API 사용 (ADR-0017).
     implementation("org.springframework.security:spring-security-oauth2-jose")
-    implementation("org.springframework.security:spring-security-oauth2-resource-server")
 
     // 2FA TOTP — RFC 6238. Google Authenticator 호환. dev.samstevens.totp 가 단순/검증된 라이브러리.
     implementation("dev.samstevens.totp:totp")

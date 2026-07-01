@@ -8,7 +8,7 @@ package com.example.auth.domain.common
  *
  * ```
  *   alice@example.com → a***e@e***e.com
- *   ab@x.io          → a***b@x***x.io
+ *   ab@x.io          → a***b@x***.io
  *   a@b.c            → a***@b***.c
  * ```
  */
