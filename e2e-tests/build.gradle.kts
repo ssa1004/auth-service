@@ -29,7 +29,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
-    testImplementation("com.redis:testcontainers-redis:2.2.2")
+    testImplementation("com.redis:testcontainers-redis:2.2.4")
     testImplementation("org.awaitility:awaitility")
     // 직접 TOTP 코드 생성용 (verify 시나리오 테스트)
     testImplementation("dev.samstevens.totp:totp")
@@ -37,7 +37,7 @@ dependencies {
     // Kotlin null-safety 와 호환되는 Jackson module — e2e 테스트의 ObjectMapper 도 Kotlin DTO 인식.
     testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     // Mockito Kotlin helpers — 필요 시 사용.
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
 }
 
 kotlin {

@@ -63,9 +63,9 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
-    testImplementation("com.redis:testcontainers-redis:2.2.2")
+    testImplementation("com.redis:testcontainers-redis:2.2.4")
     // Mockito Kotlin helpers — any() / whenever / verify 의 Kotlin friendly DSL.
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
 }
 
 kotlin {

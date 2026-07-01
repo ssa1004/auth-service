@@ -5,8 +5,8 @@
 // proxy 를 만들 수 있도록 plugin.spring 으로 @Service 클래스를 자동 open 처리한다.
 plugins {
     `java-library`
-    kotlin("jvm") version "1.9.25"
-    kotlin("plugin.spring") version "1.9.25"
+    kotlin("jvm") version "2.4.0"
+    kotlin("plugin.spring") version "2.4.0"
 }
 
 dependencies {

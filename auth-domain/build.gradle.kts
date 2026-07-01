@@ -5,7 +5,7 @@
 // 가 무변경으로 컴파일되도록 @JvmRecord / @JvmStatic / @get:JvmName 으로 ABI 를 맞춘다.
 plugins {
     `java-library`
-    kotlin("jvm") version "1.9.25"
+    kotlin("jvm") version "2.4.0"
 }
 
 dependencies {
